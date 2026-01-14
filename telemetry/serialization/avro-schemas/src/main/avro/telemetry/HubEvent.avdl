@@ -1,4 +1,188 @@
-@namespace("ru.yandex.practicum.kafka.telemetry.event")
-protocol HubEventProtocol {
-
-}
+{
+		"type":"record",
+				"name":"HubEventAvro",
+				"namespace":"ru.yandex.practicum.kafka.telemetry.event",
+		"doc":"Событие от хаба",
+		"fields":[
+		{
+				"name":"hub_id",
+						"type":"string",
+						"doc":"Идентификатор хаба"
+				},
+		{
+				"name":"timestamp",
+						"type":{
+				"type":"long",
+						"logicalType":"timestamp-millis"
+				},
+				"doc":"Метка времени события"
+				},
+		{
+				"name":"payload",
+						"type":[
+				{
+						"type":"record",
+								"name":"DeviceAddedEventAvro",
+								"fields":[
+						{
+								"name":"id",
+										"type":"string",
+										"doc":"Уникальный идентификатор устройства"
+								},
+						{
+								"name":"type",
+										"type":{
+								"type":"enum",
+										"name":"DeviceTypeAvro",
+										"symbols":[
+								"MOTION_SENSOR",
+								"TEMPERATURE_SENSOR",
+								"LIGHT_SENSOR",
+								"CLIMATE_SENSOR",
+								"SWITCH_SENSOR"
+								],
+										"doc":"Тип устройства"
+								},
+								"doc":"Тип устройства"
+								}
+						]
+						},
+				{
+						"type":"record",
+								"name":"DeviceRemovedEventAvro",
+								"fields":[
+						{
+								"name":"id",
+										"type":"string",
+										"doc":"Уникальный идентификатор устройства"
+								}
+						]
+						},
+				{
+						"type":"record",
+								"name":"ScenarioAddedEventAvro",
+								"fields":[
+						{
+								"name":"name",
+										"type":"string",
+										"doc":"Название сценария"
+								},
+						{
+								"name":"conditions",
+										"type":{
+								"type":"array",
+										"items":{
+								"type":"record",
+										"name":"ScenarioConditionAvro",
+										"fields":[
+										{
+												"name":"sensor_id",
+														"type":"string",
+														"doc":"Идентификатор устройства"
+												},
+										{
+												"name":"type",
+														"type":{
+												"type":"enum",
+														"name":"ConditionTypeAvro",
+														"symbols":[
+												"MOTION",
+												"LUMINOSITY",
+												"SWITCH",
+												"TEMPERATURE",
+												"CO2LEVEL",
+												"HUMIDITY"
+												],
+												"doc":"Тип условия"
+												},
+												"doc":"Тип условия"
+												},
+										{
+												"name":"operation",
+														"type":{
+												"type":"enum",
+														"name":"ConditionOperationAvro",
+														"symbols":[
+												"EQUALS",
+												"GREATER_THAN",
+												"LOWER_THAN"
+												],
+												"doc":"Операция сравнения"
+												},
+												"doc":"Операция, применяемая к условию"
+												},
+										{
+												"name":"value",
+														"type":[
+														"null",
+														"int",
+												"boolean"
+												],
+												"default":null,
+												"doc":"Значение для сравнения"
+												}
+										]
+								}
+								},
+								"doc":"Набор условий активации сценария"
+								},
+						{
+								"name":"actions",
+										"type":{
+								"type":"array",
+										"items":{
+								"type":"record",
+										"name":"DeviceActionAvro",
+										"fields":[
+								{
+										"name":"sensor_id",
+												"type":"string",
+												"doc":"Идентификатор устройства"
+										},
+								{
+										"name":"type",
+												"type":{
+										"type":"enum",
+												"name":"ActionTypeAvro",
+												"symbols":[
+										"ACTIVATE",
+										"DEACTIVATE",
+										"INVERSE",
+										"SET_VALUE"
+										],
+										"doc":"Тип действия"
+										},
+										"doc":"Тип действия"
+										},
+								{
+										"name":"value",
+												"type":[
+												"null",
+												"int"
+										],
+												"default":null,
+												"doc":"Значение для действия"
+										}
+								]
+								}
+								},
+								"doc":"Набор действий при активации сценария"
+								}
+						]
+						},
+				{
+						"type":"record",
+								"name":"ScenarioRemovedEventAvro",
+								"fields":[
+						{
+								"name":"name",
+										"type":"string",
+										"doc":"Название сценария"
+								}
+						]
+						}
+				],
+						"doc":"Полезная нагрузка события"
+				}
+		]
+		}

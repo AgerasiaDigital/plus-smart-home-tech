@@ -1,4 +1,117 @@
-@namespace("ru.yandex.practicum.kafka.telemetry.event")
-protocol SensorEventProtocol {
-
-}
+{
+		"type":"record",
+				"name":"SensorEventAvro",
+				"namespace":"ru.yandex.practicum.kafka.telemetry.event",
+				"doc":"Событие от датчика",
+				"fields":[
+				{
+						"name":"id",
+								"type":"string",
+								"doc":"Идентификатор сенсора"
+						},
+				{
+						"name":"hubId",
+								"type":"string",
+								"doc":"Идентификатор хаба"
+						},
+				{
+						"name":"timestamp",
+								"type":{
+						"type":"long",
+								"logicalType":"timestamp-millis"
+						},
+						"doc":"Метка времени события"
+						},
+				{
+						"name":"payload",
+								"type":[
+								{
+										"type":"record",
+												"name":"LightSensorAvro",
+												"fields":[
+										{
+												"name":"link_quality",
+														"type":"int",
+														"doc":"Качество сигнала связи"
+												},
+										{
+												"name":"luminosity",
+														"type":"int",
+														"doc":"Уровень освещённости"
+												}
+										]
+										},
+								{
+										"type":"record",
+												"name":"MotionSensorAvro",
+												"fields":[
+										{
+												"name":"link_quality",
+														"type":"int",
+														"doc":"Качество сигнала связи"
+												},
+										{
+												"name":"motion",
+														"type":"boolean",
+														"doc":"Обнаружено ли движение"
+												},
+										{
+												"name":"voltage",
+														"type":"int",
+														"doc":"Уровень напряжения"
+												}
+										]
+										},
+								{
+										"type":"record",
+												"name":"TemperatureSensorAvro",
+												"fields":[
+										{
+												"name":"temperature_c",
+														"type":"int",
+														"doc":"Температура в градусах Цельсия"
+												},
+										{
+												"name":"temperature_f",
+														"type":"int",
+														"doc":"Температура в градусах Фаренгейта"
+												}
+										]
+										},
+								{
+										"type":"record",
+												"name":"ClimateSensorAvro",
+												"fields":[
+										{
+												"name":"temperature_c",
+														"type":"int",
+														"doc":"Температура в градусах Цельсия"
+												},
+										{
+												"name":"humidity",
+														"type":"int",
+														"doc":"Уровень влажности"
+												},
+										{
+												"name":"co2_level",
+														"type":"int",
+														"doc":"Уровень углекислого газа"
+												}
+										]
+										},
+								{
+										"type":"record",
+												"name":"SwitchSensorAvro",
+												"fields":[
+										{
+												"name":"state",
+														"type":"boolean",
+														"doc":"Текущее состояние переключателя"
+												}
+										]
+										}
+						],
+								"doc":"Полезная нагрузка события датчика"
+						}
+				]
+		}
