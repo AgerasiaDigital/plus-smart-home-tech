@@ -14,7 +14,7 @@ public class EventMapper {
         SensorEventAvro.Builder builder = SensorEventAvro.newBuilder()
                 .setId(event.getId())
                 .setHubId(event.getHubId())
-                .setTimestamp(event.getTimestamp().toEpochMilli());
+                .setTimestamp(event.getTimestamp());
 
         Object payload = switch (event.getType()) {
             case LIGHT_SENSOR_EVENT -> mapLightSensor((LightSensorEvent) event);
@@ -67,7 +67,7 @@ public class EventMapper {
     public HubEventAvro mapToAvro(HubEvent event) {
         HubEventAvro.Builder builder = HubEventAvro.newBuilder()
                 .setHubId(event.getHubId())
-                .setTimestamp(event.getTimestamp().toEpochMilli());
+                .setTimestamp(event.getTimestamp());
 
         Object payload = switch (event.getType()) {
             case DEVICE_ADDED -> mapDeviceAdded((DeviceAddedEvent) event);
@@ -118,6 +118,7 @@ public class EventMapper {
                 .setOperation(ConditionOperationAvro.valueOf(condition.getOperation().name()));
 
         if (condition.getValue() != null) {
+            // Определяем, нужно ли значение как boolean или int
             if (condition.getType() == ConditionType.MOTION || condition.getType() == ConditionType.SWITCH) {
                 builder.setValue(condition.getValue() != 0);
             } else {

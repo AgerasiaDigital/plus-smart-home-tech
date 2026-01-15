@@ -27,7 +27,7 @@ public class EventService {
 
         try {
             SensorEventAvro avroEvent = eventMapper.mapToAvro(event);
-            String topic = kafkaConfiguration.getTopics().getSensors();
+            String topic = kafkaConfiguration.getSensorsTopic();
 
             ProducerRecord<String, SpecificRecordBase> record =
                     new ProducerRecord<>(topic, event.getHubId(), avroEvent);
@@ -53,7 +53,7 @@ public class EventService {
 
         try {
             HubEventAvro avroEvent = eventMapper.mapToAvro(event);
-            String topic = kafkaConfiguration.getTopics().getHubs();
+            String topic = kafkaConfiguration.getHubsTopic();
 
             ProducerRecord<String, SpecificRecordBase> record =
                     new ProducerRecord<>(topic, event.getHubId(), avroEvent);
