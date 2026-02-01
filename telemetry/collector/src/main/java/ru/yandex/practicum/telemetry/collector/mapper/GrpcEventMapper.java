@@ -140,12 +140,14 @@ public class GrpcEventMapper {
                 boolean value;
                 if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
                     value = proto.getBoolValue();
+                    log.info("Using BOOL_VALUE for {}: {}", proto.getType(), value);
                 } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
                     value = proto.getIntValue() != 0;
+                    log.info("Converting INT_VALUE to BOOL for {}: {} -> {}", proto.getType(), proto.getIntValue(), value);
                 } else {
                     value = false;
+                    log.warn("No value set for {}, defaulting to false", proto.getType());
                 }
-                log.info("Setting BOOL_VALUE for {}: {}", proto.getType(), value);
                 builder.setValue(value);
             }
             case TEMPERATURE, LUMINOSITY, CO2LEVEL, HUMIDITY -> {
@@ -153,21 +155,28 @@ public class GrpcEventMapper {
                 int value;
                 if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
                     value = proto.getIntValue();
+                    log.info("Using INT_VALUE for {}: {}", proto.getType(), value);
                 } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
                     value = proto.getBoolValue() ? 1 : 0;
+                    log.info("Converting BOOL_VALUE to INT for {}: {} -> {}", proto.getType(), proto.getBoolValue(), value);
                 } else {
                     value = 0;
+                    log.warn("No value set for {}, defaulting to 0", proto.getType());
                 }
-                log.info("Setting INT_VALUE for {}: {}", proto.getType(), value);
                 builder.setValue(value);
             }
             default -> {
-                log.warn("Unknown condition type: {}", proto.getType());
+                log.warn("Unknown condition type: {}, setting value to null", proto.getType());
                 builder.setValue(null);
             }
         }
 
-        return builder.build();
+        ScenarioConditionAvro result = builder.build();
+        log.info("Mapped condition result: type={}, value={}, valueType={}", 
+            result.getType(), result.getValue(), 
+            result.getValue() != null ? result.getValue().getClass().getSimpleName() : "null");
+        
+        return result;
     }
 
     private DeviceActionAvro mapAction(DeviceActionProto proto) {

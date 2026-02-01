@@ -53,6 +53,14 @@ public class HubEventService {
         log.info("Processing SCENARIO_ADDED: name={}, hubId={}, conditions={}, actions={}", 
             event.getName(), hubId, event.getConditions().size(), event.getActions().size());
         
+        // Логируем все условия для диагностики
+        for (int i = 0; i < event.getConditions().size(); i++) {
+            ScenarioConditionAvro conditionAvro = event.getConditions().get(i);
+            log.info("Condition {}: sensorId={}, type={}, operation={}, value={}, valueClass={}", 
+                i, conditionAvro.getSensorId(), conditionAvro.getType(), conditionAvro.getOperation(),
+                conditionAvro.getValue(), conditionAvro.getValue() != null ? conditionAvro.getValue().getClass().getSimpleName() : "null");
+        }
+        
         // Проверяем, существует ли уже сценарий
         var existing = scenarioRepository.findByHubIdAndName(hubId, event.getName().toString());
         Scenario scenario;
