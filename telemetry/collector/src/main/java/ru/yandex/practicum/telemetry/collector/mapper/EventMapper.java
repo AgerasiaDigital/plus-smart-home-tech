@@ -118,11 +118,10 @@ public class EventMapper {
                 .setOperation(ConditionOperationAvro.valueOf(condition.getOperation().name()));
 
         if (condition.getValue() != null) {
-            // Определяем, нужно ли значение как boolean или int
             if (condition.getType() == ConditionType.MOTION || condition.getType() == ConditionType.SWITCH) {
                 builder.setValue(condition.getValue() != 0);
             } else {
-                builder.setValue(condition.getValue());
+                builder.setValue((int)condition.getValue());
             }
         }
 
