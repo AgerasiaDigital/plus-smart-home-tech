@@ -126,7 +126,7 @@ public class GrpcEventMapper {
                 .setOperation(ConditionOperationAvro.valueOf(proto.getOperation().name()));
 
         switch (proto.getValueCase()) {
-            case INT_VALUE -> builder.setValue(proto.getIntValue());
+            case INT_VALUE -> builder.setValue((int) proto.getIntValue());
             case BOOL_VALUE -> builder.setValue(proto.getBoolValue());
             case VALUE_NOT_SET -> builder.setValue(null);
         }
