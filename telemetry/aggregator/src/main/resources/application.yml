@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: aggregator
+
+aggregator:
+  kafka:
+    consumer:
+      topic: telemetry.sensors.v1
+      properties:
+        "bootstrap.servers": localhost:9092
+        "group.id": "aggregator-group"
+        "key.deserializer": org.apache.kafka.common.serialization.StringDeserializer
+        "value.deserializer": ru.yandex.practicum.telemetry.aggregator.deserializer.SensorEventDeserializer
+        "auto.offset.reset": earliest
+        "enable.auto.commit": false
+        "max.poll.records": 100
+        "fetch.max.bytes": 3072000
+        "max.partition.fetch.bytes": 307200
+    producer:
+      topic: telemetry.snapshots.v1
+      properties:
+        "bootstrap.servers": localhost:9092
+        "client.id": "telemetry.aggregator"
+        "key.serializer": org.apache.kafka.common.serialization.StringSerializer
+        "value.serializer": ru.yandex.practicum.kafka.telemetry.serialization.AvroSerializer
+        "acks": all
+        "retries": 3
