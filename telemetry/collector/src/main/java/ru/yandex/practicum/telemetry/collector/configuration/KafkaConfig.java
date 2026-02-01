@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -19,22 +20,27 @@ public class KafkaConfig {
     @Getter
     @Setter
     public static class ProducerConfig {
-        private Properties properties;
-        private EnumMap<TopicType, String> topics = new EnumMap<>(TopicType.class);
+        private Map<String, String> properties = new HashMap<>();
+        private Map<String, String> topics = new HashMap<>();
 
-        public void setProperties(Map<String, String> props) {
-            this.properties = new Properties();
-            this.properties.putAll(props);
+        private EnumMap<TopicType, String> topicsEnum = new EnumMap<>(TopicType.class);
+
+        public Properties getPropertiesAsProperties() {
+            Properties props = new Properties();
+            props.putAll(properties);
+            return props;
         }
 
         public void setTopics(Map<String, String> topicsMap) {
+            this.topics = topicsMap;
+            this.topicsEnum.clear();
             for (Map.Entry<String, String> entry : topicsMap.entrySet()) {
-                this.topics.put(TopicType.from(entry.getKey()), entry.getValue());
+                this.topicsEnum.put(TopicType.from(entry.getKey()), entry.getValue());
             }
         }
 
         public String getTopic(TopicType type) {
-            return topics.get(type);
+            return topicsEnum.get(type);
         }
     }
 }

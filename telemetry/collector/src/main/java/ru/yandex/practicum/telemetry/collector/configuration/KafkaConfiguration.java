@@ -18,7 +18,7 @@ public class KafkaConfiguration {
 
     @Bean
     public KafkaProducer<String, SpecificRecordBase> kafkaProducer() {
-        return new KafkaProducer<>(kafkaConfig.getProducer().getProperties());
+        return new KafkaProducer<>(kafkaConfig.getProducer().getPropertiesAsProperties());
     }
 
     public String getSensorsTopic() {
