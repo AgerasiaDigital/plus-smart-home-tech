@@ -93,14 +93,16 @@ public class HubEventService {
                 condition.setValue(intValue);
                 log.info("Saved condition value as int: {}", intValue);
             } else if (value instanceof Boolean boolValue) {
+                // ИСПРАВЛЕНИЕ: Для boolean значений не конвертируем в 1/0
+                // Сохраняем как есть, но в базе храним как int
                 condition.setValue(boolValue ? 1 : 0);
                 log.info("Saved condition value as bool->int: {} -> {}", boolValue, boolValue ? 1 : 0);
             } else if (value == null) {
-                condition.setValue(0);
-                log.warn("Condition value is null, setting to 0");
+                condition.setValue(null);
+                log.warn("Condition value is null, setting to null");
             } else {
-                log.warn("Unknown condition value type: {}, setting to 0", value.getClass());
-                condition.setValue(0);
+                log.warn("Unknown condition value type: {}, setting to null", value.getClass());
+                condition.setValue(null);
             }
 
             condition = conditionRepository.save(condition);

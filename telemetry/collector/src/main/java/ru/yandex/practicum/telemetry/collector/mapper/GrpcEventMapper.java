@@ -125,56 +125,37 @@ public class GrpcEventMapper {
     }
 
     private ScenarioConditionAvro mapCondition(ScenarioConditionProto proto) {
-        log.info("Mapping condition: sensorId={}, type={}, operation={}, valueCase={}",
-                proto.getSensorId(), proto.getType(), proto.getOperation(), proto.getValueCase());
+        log.info("Mapping condition: sensorId={}, type={}, operation={}, valueCase={}", 
+            proto.getSensorId(), proto.getType(), proto.getOperation(), proto.getValueCase());
+        
+        if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
+            log.info("INT_VALUE: {}", proto.getIntValue());
+        } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
+            log.info("BOOL_VALUE: {}", proto.getBoolValue());
+        }
 
         ScenarioConditionAvro.Builder builder = ScenarioConditionAvro.newBuilder()
                 .setSensorId(proto.getSensorId())
                 .setType(ConditionTypeAvro.valueOf(proto.getType().name()))
                 .setOperation(ConditionOperationAvro.valueOf(proto.getOperation().name()));
 
-        // Определяем тип значения по типу условия согласно Avro схеме
-        switch (proto.getType()) {
-            case MOTION, SWITCH -> {
-                // Для MOTION и SWITCH используем boolean значения
-                boolean value;
-                if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
-                    value = proto.getBoolValue();
-                    log.info("Using BOOL_VALUE for {}: {}", proto.getType(), value);
-                } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
-                    value = proto.getIntValue() != 0;
-                    log.info("Converting INT_VALUE to BOOL for {}: {} -> {}", proto.getType(), proto.getIntValue(), value);
-                } else {
-                    value = false;
-                    log.warn("No value set for {}, defaulting to false", proto.getType());
-                }
-                builder.setValue(value);
-            }
-            case TEMPERATURE, LUMINOSITY, CO2LEVEL, HUMIDITY -> {
-                // Для числовых типов используем int значения
-                int value;
-                if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
-                    value = proto.getIntValue();
-                    log.info("Using INT_VALUE for {}: {}", proto.getType(), value);
-                } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
-                    value = proto.getBoolValue() ? 1 : 0;
-                    log.info("Converting BOOL_VALUE to INT for {}: {} -> {}", proto.getType(), proto.getBoolValue(), value);
-                } else {
-                    value = 0;
-                    log.warn("No value set for {}, defaulting to 0", proto.getType());
-                }
-                builder.setValue(value);
-            }
-            default -> {
-                log.warn("Unknown condition type: {}, setting value to null", proto.getType());
-                builder.setValue(null);
-            }
+        // ИСПРАВЛЕНИЕ: Всегда используем тот тип значения, который пришел от Hub Router
+        // Не делаем конвертацию типов - Hub Router знает, что отправляет
+        if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
+            int intValue = proto.getIntValue();
+            log.info("Setting INT_VALUE: {}", intValue);
+            builder.setValue(intValue);
+        } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
+            boolean boolValue = proto.getBoolValue();
+            log.info("Setting BOOL_VALUE: {}", boolValue);
+            builder.setValue(boolValue);
+        } else {
+            log.warn("No value set, using null");
+            builder.setValue(null);
         }
 
         ScenarioConditionAvro result = builder.build();
-        log.info("Mapped condition result: type={}, value={}, valueType={}", 
-            result.getType(), result.getValue(), 
-            result.getValue() != null ? result.getValue().getClass().getSimpleName() : "null");
+        log.info("Mapped condition: type={}, value={}", result.getType(), result.getValue());
         
         return result;
     }

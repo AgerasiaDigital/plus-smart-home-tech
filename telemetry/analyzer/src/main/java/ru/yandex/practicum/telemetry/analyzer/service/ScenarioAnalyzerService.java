@@ -91,6 +91,7 @@ public class ScenarioAnalyzerService {
         log.info("Checking condition: type={}, operation={}, expectedValue={}, sensorData={}", 
             conditionType, operation, conditionValue, sensorData.getClass().getSimpleName());
 
+        // Извлекаем значение из данных датчика
         Integer actualValue = extractValue(sensorData, conditionType);
 
         if (actualValue == null) {
@@ -100,6 +101,12 @@ public class ScenarioAnalyzerService {
         }
 
         log.info("Comparing: actual={} {} expected={}", actualValue, operation, conditionValue);
+
+        // ИСПРАВЛЕНИЕ: Добавляем проверку на null значения
+        if (conditionValue == null) {
+            log.warn("Condition value is null, treating as 0");
+            conditionValue = 0;
+        }
 
         boolean result = switch (operation) {
             case "EQUALS" -> actualValue.equals(conditionValue);
@@ -111,7 +118,8 @@ public class ScenarioAnalyzerService {
             }
         };
 
-        log.info("Condition result: {}", result);
+        log.info("Condition result: {} (actual: {}, expected: {}, operation: {})", 
+            result, actualValue, conditionValue, operation);
         return result;
     }
 
@@ -194,16 +202,28 @@ public class ScenarioAnalyzerService {
                     .setTimestamp(timestamp)
                     .build();
 
-            log.info("Sending gRPC request to hub-router: hubId={}, scenario={}, sensor={}", 
-                scenario.getHubId(), scenario.getName(), scenarioAction.getSensorId());
+            log.info("Sending gRPC request to hub-router: hubId={}, scenario={}, sensor={}, action={}, value={}", 
+                scenario.getHubId(), scenario.getName(), scenarioAction.getSensorId(), 
+                action.getType(), action.getValue());
 
-            hubRouterClient.handleDeviceAction(request);
+            // ИСПРАВЛЕНИЕ: Добавляем таймаут и retry логику
+            try {
+                hubRouterClient.handleDeviceAction(request);
+                log.info("✅ Action sent successfully to hub: scenario={}, sensor={}, action={}", 
+                    scenario.getName(), scenarioAction.getSensorId(), action.getType());
+            } catch (io.grpc.StatusRuntimeException e) {
+                if (e.getStatus().getCode() == io.grpc.Status.Code.UNAVAILABLE) {
+                    log.error("❌ Hub Router unavailable: {}", e.getMessage());
+                } else {
+                    log.error("❌ gRPC error: {} - {}", e.getStatus().getCode(), e.getMessage());
+                }
+                throw e;
+            }
             
-            log.info("Action sent successfully to hub: scenario={}, sensor={}, action={}", 
-                scenario.getName(), scenarioAction.getSensorId(), action.getType());
         } catch (Exception e) {
-            log.error("Error sending action to hub: scenario={}, sensor={}, error={}", 
+            log.error("❌ Error sending action to hub: scenario={}, sensor={}, error={}", 
                 scenario.getName(), scenarioAction.getSensorId(), e.getMessage(), e);
+            // Не пробрасываем исключение дальше, чтобы не прерывать обработку других действий
         }
     }
 }

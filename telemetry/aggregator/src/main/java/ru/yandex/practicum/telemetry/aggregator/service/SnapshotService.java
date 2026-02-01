@@ -36,24 +36,17 @@ public class SnapshotService {
 
         SensorStateAvro existingState = sensorsState.get(sensorId);
 
+        // Проверяем только временные метки - игнорируем дедупликацию данных
         if (existingState != null) {
             if (existingState.getTimestamp().compareTo(event.getTimestamp()) >= 0) {
                 log.debug("Ignoring outdated event for sensor {} in hub {}: existing={}, new={}", 
                     sensorId, hubId, existingState.getTimestamp(), event.getTimestamp());
                 return Optional.empty();
             }
-
-            // Проверяем изменение данных более детально
-            boolean dataEquals = existingState.getData().equals(event.getPayload());
-            log.debug("Data comparison for sensor {} in hub {}: existing={}, new={}, equals={}", 
-                sensorId, hubId, existingState.getData(), event.getPayload(), dataEquals);
-                
-            // Для одинаковых данных все равно обновляем timestamp
-            if (dataEquals) {
-                log.debug("Data unchanged for sensor {} in hub {}, but updating timestamp", sensorId, hubId);
-            }
+            log.debug("Updating sensor {} in hub {} with newer timestamp", sensorId, hubId);
         }
 
+        // ВСЕГДА создаем новый снапшот, независимо от изменения данных
         SensorStateAvro newState = SensorStateAvro.newBuilder()
                 .setTimestamp(event.getTimestamp())
                 .setData(event.getPayload())
@@ -69,7 +62,7 @@ public class SnapshotService {
 
         snapshots.put(hubId, updatedSnapshot);
 
-        log.info("Updated snapshot for hub {}, sensor count: {}, updated sensor: {}", 
+        log.info("Generated snapshot for hub {}, sensor count: {}, updated sensor: {}", 
             hubId, sensorsState.size(), sensorId);
         return Optional.of(updatedSnapshot);
     }
