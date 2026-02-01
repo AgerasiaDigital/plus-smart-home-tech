@@ -133,11 +133,18 @@ public class GrpcEventMapper {
                 .setType(ConditionTypeAvro.valueOf(proto.getType().name()))
                 .setOperation(ConditionOperationAvro.valueOf(proto.getOperation().name()));
 
+        // Явно определяем тип значения по типу условия
         switch (proto.getValueCase()) {
             case INT_VALUE -> {
-                int value = proto.getIntValue();
-                log.info("Setting INT_VALUE: {}", value);
-                builder.setValue(value);
+                if (proto.getType() == ConditionTypeProto.MOTION || proto.getType() == ConditionTypeProto.SWITCH) {
+                    boolean value = proto.getIntValue() != 0;
+                    log.info("Setting BOOL_VALUE (from int): {}", value);
+                    builder.setValue(value);
+                } else {
+                    int value = proto.getIntValue();
+                    log.info("Setting INT_VALUE: {}", value);
+                    builder.setValue(value);
+                }
             }
             case BOOL_VALUE -> {
                 boolean value = proto.getBoolValue();
