@@ -1,5 +1,6 @@
 package ru.yandex.practicum.telemetry.collector.mapper;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.grpc.telemetry.event.*;
 import ru.yandex.practicum.kafka.telemetry.event.*;
@@ -7,6 +8,7 @@ import ru.yandex.practicum.kafka.telemetry.event.*;
 import java.time.Instant;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class GrpcEventMapper {
 
@@ -102,6 +104,9 @@ public class GrpcEventMapper {
     }
 
     private ScenarioAddedEventAvro mapScenarioAdded(ScenarioAddedEventProto proto) {
+        log.info("Mapping SCENARIO_ADDED: name={}, conditions={}, actions={}",
+                proto.getName(), proto.getConditionsCount(), proto.getActionsCount());
+
         return ScenarioAddedEventAvro.newBuilder()
                 .setName(proto.getName())
                 .setConditions(proto.getConditionsList().stream()
@@ -120,15 +125,29 @@ public class GrpcEventMapper {
     }
 
     private ScenarioConditionAvro mapCondition(ScenarioConditionProto proto) {
+        log.info("Mapping condition: sensorId={}, type={}, operation={}, valueCase={}",
+                proto.getSensorId(), proto.getType(), proto.getOperation(), proto.getValueCase());
+
         ScenarioConditionAvro.Builder builder = ScenarioConditionAvro.newBuilder()
                 .setSensorId(proto.getSensorId())
                 .setType(ConditionTypeAvro.valueOf(proto.getType().name()))
                 .setOperation(ConditionOperationAvro.valueOf(proto.getOperation().name()));
 
         switch (proto.getValueCase()) {
-            case INT_VALUE -> builder.setValue((int) proto.getIntValue());
-            case BOOL_VALUE -> builder.setValue(proto.getBoolValue());
-            case VALUE_NOT_SET -> builder.setValue(null);
+            case INT_VALUE -> {
+                int value = proto.getIntValue();
+                log.info("Setting INT_VALUE: {}", value);
+                builder.setValue(value);
+            }
+            case BOOL_VALUE -> {
+                boolean value = proto.getBoolValue();
+                log.info("Setting BOOL_VALUE: {}", value);
+                builder.setValue(value);
+            }
+            case VALUE_NOT_SET -> {
+                log.info("VALUE_NOT_SET");
+                builder.setValue(null);
+            }
         }
 
         return builder.build();
