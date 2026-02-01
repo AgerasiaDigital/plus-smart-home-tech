@@ -10,7 +10,6 @@ import java.util.Properties;
 
 @Getter
 @Component
-@ConfigurationProperties("collector.kafka")
 public class KafkaConfig {
     private ProducerConfig producer;
 
