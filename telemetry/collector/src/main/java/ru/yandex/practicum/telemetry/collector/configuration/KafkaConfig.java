@@ -1,6 +1,7 @@
 package ru.yandex.practicum.telemetry.collector.configuration;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -9,24 +10,25 @@ import java.util.Map;
 import java.util.Properties;
 
 @Getter
+@Setter
 @Component
+@ConfigurationProperties("collector.kafka")
 public class KafkaConfig {
     private ProducerConfig producer;
 
-    public void setProducer(ProducerConfig producer) {
-        this.producer = producer;
-    }
-
     @Getter
+    @Setter
     public static class ProducerConfig {
-        private final Properties properties;
-        private final EnumMap<TopicType, String> topics = new EnumMap<>(TopicType.class);
+        private Properties properties;
+        private EnumMap<TopicType, String> topics = new EnumMap<>(TopicType.class);
 
-        public ProducerConfig(Map<String, String> properties, Map<String, String> topics) {
+        public void setProperties(Map<String, String> props) {
             this.properties = new Properties();
-            this.properties.putAll(properties);
+            this.properties.putAll(props);
+        }
 
-            for (Map.Entry<String, String> entry : topics.entrySet()) {
+        public void setTopics(Map<String, String> topicsMap) {
+            for (Map.Entry<String, String> entry : topicsMap.entrySet()) {
                 this.topics.put(TopicType.from(entry.getKey()), entry.getValue());
             }
         }
