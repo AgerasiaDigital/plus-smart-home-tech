@@ -58,7 +58,7 @@ public class HubEventProcessor implements Runnable {
     }
 
     private void processHubEvent(HubEventAvro event) {
-        log.debug("Processing hub event: hub={}, type={}",
+        log.info("🏠 Processing hub event: hub={}, type={}",
                 event.getHubId(), event.getPayload().getClass().getSimpleName());
 
         hubEventService.processEvent(event);

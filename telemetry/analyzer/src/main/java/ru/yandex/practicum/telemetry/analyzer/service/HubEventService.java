@@ -92,17 +92,27 @@ public class HubEventService {
             if (value instanceof Integer intValue) {
                 condition.setValue(intValue);
                 log.info("Saved condition value as int: {}", intValue);
+            } else if (value instanceof Long longValue) {
+                // Handle Long values by converting to Integer
+                condition.setValue(longValue.intValue());
+                log.info("Saved condition value as long->int: {} -> {}", longValue, longValue.intValue());
             } else if (value instanceof Boolean boolValue) {
-                // ИСПРАВЛЕНИЕ: Для boolean значений не конвертируем в 1/0
-                // Сохраняем как есть, но в базе храним как int
+                // For boolean values, convert to 1/0 for database storage
                 condition.setValue(boolValue ? 1 : 0);
                 log.info("Saved condition value as bool->int: {} -> {}", boolValue, boolValue ? 1 : 0);
+            } else if (value instanceof Number numberValue) {
+                // Handle other numeric types
+                condition.setValue(numberValue.intValue());
+                log.info("Saved condition value as number->int: {} -> {}", numberValue, numberValue.intValue());
             } else if (value == null) {
-                condition.setValue(null);
-                log.warn("Condition value is null, setting to null");
+                // ИСПРАВЛЕНИЕ: Не сохраняем условия с null значениями
+                log.error("Condition value is null for type: {}, operation: {}. Skipping condition.", 
+                    conditionAvro.getType(), conditionAvro.getOperation());
+                continue; // Пропускаем это условие
             } else {
-                log.warn("Unknown condition value type: {}, setting to null", value.getClass());
-                condition.setValue(null);
+                log.error("Unknown condition value type: {} for value: {}. Skipping condition.", 
+                    value.getClass(), value);
+                continue; // Пропускаем это условие
             }
 
             condition = conditionRepository.save(condition);

@@ -38,12 +38,15 @@ public class SnapshotService {
 
         // Проверяем только временные метки - игнорируем дедупликацию данных
         if (existingState != null) {
-            if (existingState.getTimestamp().compareTo(event.getTimestamp()) >= 0) {
-                log.debug("Ignoring outdated event for sensor {} in hub {}: existing={}, new={}", 
+            if (existingState.getTimestamp().compareTo(event.getTimestamp()) > 0) {
+                log.warn("⚠️ Ignoring outdated event for sensor {} in hub {}: existing={}, new={}", 
                     sensorId, hubId, existingState.getTimestamp(), event.getTimestamp());
                 return Optional.empty();
             }
-            log.debug("Updating sensor {} in hub {} with newer timestamp", sensorId, hubId);
+            log.info("✅ Updating sensor {} in hub {} with newer timestamp: {} -> {}", 
+                sensorId, hubId, existingState.getTimestamp(), event.getTimestamp());
+        } else {
+            log.info("✅ Adding new sensor {} to hub {}", sensorId, hubId);
         }
 
         // ВСЕГДА создаем новый снапшот, независимо от изменения данных
@@ -62,7 +65,7 @@ public class SnapshotService {
 
         snapshots.put(hubId, updatedSnapshot);
 
-        log.info("Generated snapshot for hub {}, sensor count: {}, updated sensor: {}", 
+        log.info("📸 Generated snapshot for hub {}, sensor count: {}, updated sensor: {}", 
             hubId, sensorsState.size(), sensorId);
         return Optional.of(updatedSnapshot);
     }

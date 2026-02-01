@@ -29,18 +29,23 @@ public class ScenarioAnalyzerService {
 
     public void analyzeSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
-        log.info("Analyzing snapshot for hub: {}, sensors count: {}", hubId, snapshot.getSensorsState().size());
+        log.info("🔍 Analyzing snapshot for hub: {}, sensors count: {}", hubId, snapshot.getSensorsState().size());
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
-        log.info("Found {} scenarios for hub: {}", scenarios.size(), hubId);
+        log.info("📋 Found {} scenarios for hub: {}", scenarios.size(), hubId);
+
+        if (scenarios.isEmpty()) {
+            log.warn("⚠️ No scenarios found for hub: {}", hubId);
+            return;
+        }
 
         for (Scenario scenario : scenarios) {
-            log.info("Checking scenario: {} for hub: {}", scenario.getName(), hubId);
+            log.info("🎯 Checking scenario: {} for hub: {}", scenario.getName(), hubId);
             if (checkScenarioConditions(scenario, snapshot)) {
-                log.info("Scenario conditions met, executing actions: {}", scenario.getName());
+                log.info("✅ Scenario conditions met, executing actions: {}", scenario.getName());
                 executeScenarioActions(scenario, snapshot);
             } else {
-                log.debug("Scenario conditions not met: {}", scenario.getName());
+                log.info("❌ Scenario conditions not met: {}", scenario.getName());
             }
         }
     }
@@ -102,10 +107,11 @@ public class ScenarioAnalyzerService {
 
         log.info("Comparing: actual={} {} expected={}", actualValue, operation, conditionValue);
 
-        // ИСПРАВЛЕНИЕ: Добавляем проверку на null значения
+        // ИСПРАВЛЕНИЕ: Проверяем на null значения и отклоняем некорректные условия
         if (conditionValue == null) {
-            log.warn("Condition value is null, treating as 0");
-            conditionValue = 0;
+            log.error("Condition value is null for condition type: {}, operation: {}. Rejecting condition.", 
+                conditionType, operation);
+            return false;
         }
 
         boolean result = switch (operation) {

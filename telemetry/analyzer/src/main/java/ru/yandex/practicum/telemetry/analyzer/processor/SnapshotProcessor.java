@@ -48,7 +48,11 @@ public class SnapshotProcessor {
                     count++;
                 }
 
-                snapshotConsumer.commitAsync();
+                // Фиксируем оффсеты синхронно для надежности
+                if (!currentOffsets.isEmpty()) {
+                    snapshotConsumer.commitSync(currentOffsets);
+                    log.debug("Committed {} offsets synchronously", currentOffsets.size());
+                }
             }
 
         } catch (WakeupException ignored) {
@@ -66,7 +70,7 @@ public class SnapshotProcessor {
     }
 
     private void processSnapshot(SensorsSnapshotAvro snapshot) {
-        log.info("Processing snapshot for hub: {}, sensors: {}", 
+        log.info("📥 Processing snapshot for hub: {}, sensors: {}", 
             snapshot.getHubId(), snapshot.getSensorsState().keySet());
         scenarioAnalyzerService.analyzeSnapshot(snapshot);
     }

@@ -54,8 +54,11 @@ public class AggregationStarter {
                     count++;
                 }
 
-                // Фиксируем максимальный оффсет
-                consumer.commitAsync();
+                // Фиксируем оффсеты синхронно для надежности
+                if (!currentOffsets.isEmpty()) {
+                    consumer.commitSync(currentOffsets);
+                    log.debug("Committed {} offsets synchronously", currentOffsets.size());
+                }
             }
 
         } catch (WakeupException ignored) {
