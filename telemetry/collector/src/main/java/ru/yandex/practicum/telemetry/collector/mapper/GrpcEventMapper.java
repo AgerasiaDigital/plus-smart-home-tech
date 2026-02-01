@@ -133,26 +133,36 @@ public class GrpcEventMapper {
                 .setType(ConditionTypeAvro.valueOf(proto.getType().name()))
                 .setOperation(ConditionOperationAvro.valueOf(proto.getOperation().name()));
 
-        // Явно определяем тип значения по типу условия
-        switch (proto.getValueCase()) {
-            case INT_VALUE -> {
-                if (proto.getType() == ConditionTypeProto.MOTION || proto.getType() == ConditionTypeProto.SWITCH) {
-                    boolean value = proto.getIntValue() != 0;
-                    log.info("Setting BOOL_VALUE (from int): {}", value);
-                    builder.setValue(value);
+        // Определяем тип значения по типу условия, а не по valueCase
+        switch (proto.getType()) {
+            case MOTION, SWITCH -> {
+                // Для MOTION и SWITCH используем boolean значения
+                boolean value;
+                if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
+                    value = proto.getBoolValue();
+                } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
+                    value = proto.getIntValue() != 0;
                 } else {
-                    int value = proto.getIntValue();
-                    log.info("Setting INT_VALUE: {}", value);
-                    builder.setValue(value);
+                    value = false;
                 }
-            }
-            case BOOL_VALUE -> {
-                boolean value = proto.getBoolValue();
-                log.info("Setting BOOL_VALUE: {}", value);
+                log.info("Setting BOOL_VALUE for {}: {}", proto.getType(), value);
                 builder.setValue(value);
             }
-            case VALUE_NOT_SET -> {
-                log.info("VALUE_NOT_SET");
+            case TEMPERATURE, LUMINOSITY -> {
+                // Для TEMPERATURE и LUMINOSITY используем int значения
+                int value;
+                if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
+                    value = proto.getIntValue();
+                } else if (proto.getValueCase() == ScenarioConditionProto.ValueCase.BOOL_VALUE) {
+                    value = proto.getBoolValue() ? 1 : 0;
+                } else {
+                    value = 0;
+                }
+                log.info("Setting INT_VALUE for {}: {}", proto.getType(), value);
+                builder.setValue(value);
+            }
+            default -> {
+                log.warn("Unknown condition type: {}", proto.getType());
                 builder.setValue(null);
             }
         }

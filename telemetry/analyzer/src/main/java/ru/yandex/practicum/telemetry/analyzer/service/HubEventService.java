@@ -50,12 +50,16 @@ public class HubEventService {
     }
 
     private void handleScenarioAdded(String hubId, ScenarioAddedEventAvro event) {
+        log.info("Processing SCENARIO_ADDED: name={}, hubId={}, conditions={}, actions={}", 
+            event.getName(), hubId, event.getConditions().size(), event.getActions().size());
+        
         // Проверяем, существует ли уже сценарий
         var existing = scenarioRepository.findByHubIdAndName(hubId, event.getName().toString());
         Scenario scenario;
 
         if (existing.isPresent()) {
             scenario = existing.get();
+            log.info("Updating existing scenario: id={}", scenario.getId());
             // Удаляем старые условия и действия
             scenarioConditionRepository.deleteByScenarioId(scenario.getId());
             scenarioActionRepository.deleteByScenarioId(scenario.getId());
@@ -64,6 +68,7 @@ public class HubEventService {
             scenario.setHubId(hubId);
             scenario.setName(event.getName().toString());
             scenario = scenarioRepository.save(scenario);
+            log.info("Created new scenario: id={}", scenario.getId());
         }
 
         // Добавляем условия
@@ -75,8 +80,12 @@ public class HubEventService {
             Object value = conditionAvro.getValue();
             if (value instanceof Integer intValue) {
                 condition.setValue(intValue);
+                log.info("Condition value (int): {}", intValue);
             } else if (value instanceof Boolean boolValue) {
                 condition.setValue(boolValue ? 1 : 0);
+                log.info("Condition value (bool->int): {}", boolValue ? 1 : 0);
+            } else {
+                log.warn("Unknown condition value type: {}", value != null ? value.getClass() : "null");
             }
 
             condition = conditionRepository.save(condition);
@@ -86,6 +95,10 @@ public class HubEventService {
             scenarioCondition.setSensorId(conditionAvro.getSensorId().toString());
             scenarioCondition.setConditionId(condition.getId());
             scenarioConditionRepository.save(scenarioCondition);
+            
+            log.info("Added condition: type={}, operation={}, value={}, sensorId={}", 
+                condition.getType(), condition.getOperation(), condition.getValue(), 
+                conditionAvro.getSensorId());
         }
 
         // Добавляем действия
@@ -100,9 +113,12 @@ public class HubEventService {
             scenarioAction.setSensorId(actionAvro.getSensorId().toString());
             scenarioAction.setActionId(action.getId());
             scenarioActionRepository.save(scenarioAction);
+            
+            log.info("Added action: type={}, value={}, sensorId={}", 
+                action.getType(), action.getValue(), actionAvro.getSensorId());
         }
 
-        log.info("Scenario added/updated: name={}, hubId={}", event.getName(), hubId);
+        log.info("Scenario added/updated successfully: name={}, hubId={}", event.getName(), hubId);
     }
 
     private void handleScenarioRemoved(String hubId, ScenarioRemovedEventAvro event) {

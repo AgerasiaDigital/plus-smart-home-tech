@@ -16,6 +16,10 @@ public class SnapshotService {
 
     public Optional<SensorsSnapshotAvro> updateState(SensorEventAvro event) {
         String hubId = event.getHubId();
+        String sensorId = event.getId();
+        
+        log.info("Processing sensor event: hubId={}, sensorId={}, timestamp={}", 
+            hubId, sensorId, event.getTimestamp());
 
         SensorsSnapshotAvro snapshot = snapshots.get(hubId);
 
@@ -23,21 +27,29 @@ public class SnapshotService {
 
         if (snapshot == null) {
             sensorsState = new HashMap<>();
+            log.info("Creating new snapshot for hub: {}", hubId);
         } else {
             sensorsState = new HashMap<>(snapshot.getSensorsState());
+            log.debug("Updating existing snapshot for hub: {}, current sensors: {}", 
+                hubId, sensorsState.size());
         }
 
-        String sensorId = event.getId();
         SensorStateAvro existingState = sensorsState.get(sensorId);
 
         if (existingState != null) {
             if (existingState.getTimestamp().compareTo(event.getTimestamp()) >= 0) {
-                log.debug("Ignoring outdated event for sensor {} in hub {}", sensorId, hubId);
+                log.debug("Ignoring outdated event for sensor {} in hub {}: existing={}, new={}", 
+                    sensorId, hubId, existingState.getTimestamp(), event.getTimestamp());
                 return Optional.empty();
             }
 
-            if (existingState.getData().equals(event.getPayload())) {
-                log.debug("Data unchanged for sensor {} in hub {}", sensorId, hubId);
+            // Проверяем изменение данных более детально
+            boolean dataEquals = existingState.getData().equals(event.getPayload());
+            log.debug("Data comparison for sensor {} in hub {}: existing={}, new={}, equals={}", 
+                sensorId, hubId, existingState.getData(), event.getPayload(), dataEquals);
+                
+            if (dataEquals) {
+                log.debug("Data unchanged for sensor {} in hub {}, skipping snapshot update", sensorId, hubId);
                 return Optional.empty();
             }
         }
@@ -57,7 +69,8 @@ public class SnapshotService {
 
         snapshots.put(hubId, updatedSnapshot);
 
-        log.info("Updated snapshot for hub {}, sensor count: {}", hubId, sensorsState.size());
+        log.info("Updated snapshot for hub {}, sensor count: {}, updated sensor: {}", 
+            hubId, sensorsState.size(), sensorId);
         return Optional.of(updatedSnapshot);
     }
 }

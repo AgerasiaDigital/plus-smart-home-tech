@@ -29,21 +29,28 @@ public class ScenarioAnalyzerService {
 
     public void analyzeSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
-        log.debug("Analyzing snapshot for hub: {}", hubId);
+        log.info("Analyzing snapshot for hub: {}, sensors count: {}", hubId, snapshot.getSensorsState().size());
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
+        log.info("Found {} scenarios for hub: {}", scenarios.size(), hubId);
 
         for (Scenario scenario : scenarios) {
+            log.info("Checking scenario: {} for hub: {}", scenario.getName(), hubId);
             if (checkScenarioConditions(scenario, snapshot)) {
+                log.info("Scenario conditions met, executing actions: {}", scenario.getName());
                 executeScenarioActions(scenario, snapshot);
+            } else {
+                log.debug("Scenario conditions not met: {}", scenario.getName());
             }
         }
     }
 
     private boolean checkScenarioConditions(Scenario scenario, SensorsSnapshotAvro snapshot) {
         List<ScenarioCondition> conditions = scenarioConditionRepository.findByScenarioId(scenario.getId());
+        log.info("Checking {} conditions for scenario: {}", conditions.size(), scenario.getName());
 
         if (conditions.isEmpty()) {
+            log.warn("No conditions found for scenario: {}", scenario.getName());
             return false;
         }
 
@@ -54,11 +61,19 @@ public class ScenarioAnalyzerService {
             SensorStateAvro sensorState = sensorsState.get(scenarioCondition.getSensorId());
 
             if (sensorState == null) {
-                log.debug("Sensor {} not found in snapshot", scenarioCondition.getSensorId());
+                log.debug("Sensor {} not found in snapshot for scenario: {}", 
+                    scenarioCondition.getSensorId(), scenario.getName());
                 return false;
             }
 
-            if (!checkCondition(scenarioCondition.getCondition(), sensorState)) {
+            Condition condition = scenarioCondition.getCondition();
+            log.info("Checking condition: type={}, operation={}, value={} for sensor: {}", 
+                condition.getType(), condition.getOperation(), condition.getValue(), 
+                scenarioCondition.getSensorId());
+
+            if (!checkCondition(condition, sensorState)) {
+                log.info("Condition not met for scenario: {}, sensor: {}", 
+                    scenario.getName(), scenarioCondition.getSensorId());
                 return false;
             }
         }
@@ -73,18 +88,31 @@ public class ScenarioAnalyzerService {
         String operation = condition.getOperation();
         Integer conditionValue = condition.getValue();
 
+        log.info("Checking condition: type={}, operation={}, expectedValue={}, sensorData={}", 
+            conditionType, operation, conditionValue, sensorData.getClass().getSimpleName());
+
         Integer actualValue = extractValue(sensorData, conditionType);
 
         if (actualValue == null) {
+            log.warn("Could not extract value for condition type: {} from sensor data: {}", 
+                conditionType, sensorData.getClass().getSimpleName());
             return false;
         }
 
-        return switch (operation) {
+        log.info("Comparing: actual={} {} expected={}", actualValue, operation, conditionValue);
+
+        boolean result = switch (operation) {
             case "EQUALS" -> actualValue.equals(conditionValue);
             case "GREATER_THAN" -> actualValue > conditionValue;
             case "LOWER_THAN" -> actualValue < conditionValue;
-            default -> false;
+            default -> {
+                log.warn("Unknown operation: {}", operation);
+                yield false;
+            }
         };
+
+        log.info("Condition result: {}", result);
+        return result;
     }
 
     private Integer extractValue(Object sensorData, String conditionType) {
