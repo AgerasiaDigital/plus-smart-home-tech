@@ -15,11 +15,11 @@ public class SnapshotService {
     private final Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
 
     public Optional<SensorsSnapshotAvro> updateState(SensorEventAvro event) {
-        String hubId = event.getHubId().toString();
+        String hubId = event.getHubId();
 
         SensorsSnapshotAvro snapshot = snapshots.get(hubId);
 
-        Map<CharSequence, SensorStateAvro> sensorsState;
+        Map<String, SensorStateAvro> sensorsState;
 
         if (snapshot == null) {
             sensorsState = new HashMap<>();
@@ -27,7 +27,7 @@ public class SnapshotService {
             sensorsState = new HashMap<>(snapshot.getSensorsState());
         }
 
-        CharSequence sensorId = event.getId();
+        String sensorId = event.getId();
         SensorStateAvro existingState = sensorsState.get(sensorId);
 
         if (existingState != null) {

@@ -18,3 +18,4 @@ public class Scenario {
 
     @Column(nullable = false)
     private String name;
+}

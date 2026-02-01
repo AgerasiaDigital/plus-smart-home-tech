@@ -28,7 +28,7 @@ public class ScenarioAnalyzerService {
     private final ScenarioActionRepository scenarioActionRepository;
 
     public void analyzeSnapshot(SensorsSnapshotAvro snapshot) {
-        String hubId = snapshot.getHubId().toString();
+        String hubId = snapshot.getHubId();
         log.debug("Analyzing snapshot for hub: {}", hubId);
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
@@ -47,7 +47,7 @@ public class ScenarioAnalyzerService {
             return false;
         }
 
-        Map<CharSequence, SensorStateAvro> sensorsState = snapshot.getSensorsState();
+        Map<String, SensorStateAvro> sensorsState = snapshot.getSensorsState();
 
         // Все условия должны быть выполнены
         for (ScenarioCondition scenarioCondition : conditions) {
