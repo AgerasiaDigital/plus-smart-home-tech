@@ -78,14 +78,21 @@ public class HubEventService {
             condition.setOperation(conditionAvro.getOperation().toString());
 
             Object value = conditionAvro.getValue();
+            log.info("Processing condition value: type={}, value={}, valueClass={}", 
+                conditionAvro.getType(), value, value != null ? value.getClass().getSimpleName() : "null");
+                
             if (value instanceof Integer intValue) {
                 condition.setValue(intValue);
-                log.info("Condition value (int): {}", intValue);
+                log.info("Saved condition value as int: {}", intValue);
             } else if (value instanceof Boolean boolValue) {
                 condition.setValue(boolValue ? 1 : 0);
-                log.info("Condition value (bool->int): {}", boolValue ? 1 : 0);
+                log.info("Saved condition value as bool->int: {} -> {}", boolValue, boolValue ? 1 : 0);
+            } else if (value == null) {
+                condition.setValue(0);
+                log.warn("Condition value is null, setting to 0");
             } else {
-                log.warn("Unknown condition value type: {}", value != null ? value.getClass() : "null");
+                log.warn("Unknown condition value type: {}, setting to 0", value.getClass());
+                condition.setValue(0);
             }
 
             condition = conditionRepository.save(condition);

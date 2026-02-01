@@ -133,7 +133,7 @@ public class GrpcEventMapper {
                 .setType(ConditionTypeAvro.valueOf(proto.getType().name()))
                 .setOperation(ConditionOperationAvro.valueOf(proto.getOperation().name()));
 
-        // Определяем тип значения по типу условия, а не по valueCase
+        // Определяем тип значения по типу условия согласно Avro схеме
         switch (proto.getType()) {
             case MOTION, SWITCH -> {
                 // Для MOTION и SWITCH используем boolean значения
@@ -148,8 +148,8 @@ public class GrpcEventMapper {
                 log.info("Setting BOOL_VALUE for {}: {}", proto.getType(), value);
                 builder.setValue(value);
             }
-            case TEMPERATURE, LUMINOSITY -> {
-                // Для TEMPERATURE и LUMINOSITY используем int значения
+            case TEMPERATURE, LUMINOSITY, CO2LEVEL, HUMIDITY -> {
+                // Для числовых типов используем int значения
                 int value;
                 if (proto.getValueCase() == ScenarioConditionProto.ValueCase.INT_VALUE) {
                     value = proto.getIntValue();

@@ -66,7 +66,8 @@ public class SnapshotProcessor {
     }
 
     private void processSnapshot(SensorsSnapshotAvro snapshot) {
-        log.debug("Processing snapshot for hub: {}", snapshot.getHubId());
+        log.info("Processing snapshot for hub: {}, sensors: {}", 
+            snapshot.getHubId(), snapshot.getSensorsState().keySet());
         scenarioAnalyzerService.analyzeSnapshot(snapshot);
     }
 

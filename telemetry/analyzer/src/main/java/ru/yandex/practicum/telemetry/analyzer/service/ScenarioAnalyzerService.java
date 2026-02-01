@@ -171,31 +171,39 @@ public class ScenarioAnalyzerService {
                                  SensorsSnapshotAvro snapshot) {
         Action action = scenarioAction.getAction();
 
-        DeviceActionProto deviceAction = DeviceActionProto.newBuilder()
-                .setSensorId(scenarioAction.getSensorId())
-                .setType(ActionTypeProto.valueOf(action.getType()))
-                .setValue(action.getValue() != null ? action.getValue() : 0)
-                .build();
-
-        Instant now = Instant.now();
-        Timestamp timestamp = Timestamp.newBuilder()
-                .setSeconds(now.getEpochSecond())
-                .setNanos(now.getNano())
-                .build();
-
-        DeviceActionRequest request = DeviceActionRequest.newBuilder()
-                .setHubId(scenario.getHubId())
-                .setScenarioName(scenario.getName())
-                .setAction(deviceAction)
-                .setTimestamp(timestamp)
-                .build();
+        log.info("Preparing to send action to hub: scenario={}, sensor={}, actionType={}, actionValue={}", 
+            scenario.getName(), scenarioAction.getSensorId(), action.getType(), action.getValue());
 
         try {
+            DeviceActionProto deviceAction = DeviceActionProto.newBuilder()
+                    .setSensorId(scenarioAction.getSensorId())
+                    .setType(ActionTypeProto.valueOf(action.getType()))
+                    .setValue(action.getValue() != null ? action.getValue() : 0)
+                    .build();
+
+            Instant now = Instant.now();
+            Timestamp timestamp = Timestamp.newBuilder()
+                    .setSeconds(now.getEpochSecond())
+                    .setNanos(now.getNano())
+                    .build();
+
+            DeviceActionRequest request = DeviceActionRequest.newBuilder()
+                    .setHubId(scenario.getHubId())
+                    .setScenarioName(scenario.getName())
+                    .setAction(deviceAction)
+                    .setTimestamp(timestamp)
+                    .build();
+
+            log.info("Sending gRPC request to hub-router: hubId={}, scenario={}, sensor={}", 
+                scenario.getHubId(), scenario.getName(), scenarioAction.getSensorId());
+
             hubRouterClient.handleDeviceAction(request);
-            log.info("Action sent to hub: scenario={}, sensor={}, action={}",
-                    scenario.getName(), scenarioAction.getSensorId(), action.getType());
+            
+            log.info("Action sent successfully to hub: scenario={}, sensor={}, action={}", 
+                scenario.getName(), scenarioAction.getSensorId(), action.getType());
         } catch (Exception e) {
-            log.error("Error sending action to hub", e);
+            log.error("Error sending action to hub: scenario={}, sensor={}, error={}", 
+                scenario.getName(), scenarioAction.getSensorId(), e.getMessage(), e);
         }
     }
 }

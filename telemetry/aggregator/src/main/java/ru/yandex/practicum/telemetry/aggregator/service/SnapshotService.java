@@ -48,9 +48,11 @@ public class SnapshotService {
             log.debug("Data comparison for sensor {} in hub {}: existing={}, new={}, equals={}", 
                 sensorId, hubId, existingState.getData(), event.getPayload(), dataEquals);
                 
+            // ВАЖНО: Для некоторых типов датчиков (например, MOTION) одинаковые значения 
+            // могут быть значимыми, поэтому не пропускаем их полностью
             if (dataEquals) {
-                log.debug("Data unchanged for sensor {} in hub {}, skipping snapshot update", sensorId, hubId);
-                return Optional.empty();
+                log.debug("Data unchanged for sensor {} in hub {}, but still updating timestamp", sensorId, hubId);
+                // Не возвращаем empty - обновляем timestamp даже для одинаковых данных
             }
         }
 
