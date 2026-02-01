@@ -70,6 +70,13 @@
                 <version>${grpc-spring-boot-starter.version}</version>
             </dependency>
 
+            <!-- Добавлено: gRPC Client -->
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-client-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot-starter.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-stub</artifactId>

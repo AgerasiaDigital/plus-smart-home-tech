@@ -15,30 +15,29 @@ public class SnapshotService {
     private final Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
 
     public Optional<SensorsSnapshotAvro> updateState(SensorEventAvro event) {
-        String hubId = event.getHubId();
+        String hubId = event.getHubId().toString();
 
-        SensorsSnapshotAvro snapshot = snapshots.computeIfAbsent(
-                hubId,
-                id -> SensorsSnapshotAvro.newBuilder()
-                        .setHubId(id)
-                        .setTimestamp(event.getTimestamp())
-                        .setSensorsState(new HashMap<>())
-                        .build()
-        );
+        SensorsSnapshotAvro snapshot = snapshots.get(hubId);
 
-        Map<CharSequence, SensorStateAvro> sensorsState = new HashMap<>(snapshot.getSensorsState());
+        Map<CharSequence, SensorStateAvro> sensorsState;
 
-        SensorStateAvro existingState = sensorsState.get(event.getId());
+        if (snapshot == null) {
+            sensorsState = new HashMap<>();
+        } else {
+            sensorsState = new HashMap<>(snapshot.getSensorsState());
+        }
+
+        CharSequence sensorId = event.getId();
+        SensorStateAvro existingState = sensorsState.get(sensorId);
 
         if (existingState != null) {
-            if (existingState.getTimestamp() >= event.getTimestamp()) {
-                // Событие устарело, игнорируем
-                log.debug("Ignoring outdated event for sensor {} in hub {}", event.getId(), hubId);
+            if (existingState.getTimestamp().compareTo(event.getTimestamp()) >= 0) {
+                log.debug("Ignoring outdated event for sensor {} in hub {}", sensorId, hubId);
                 return Optional.empty();
             }
 
             if (existingState.getData().equals(event.getPayload())) {
-                log.debug("Data unchanged for sensor {} in hub {}", event.getId(), hubId);
+                log.debug("Data unchanged for sensor {} in hub {}", sensorId, hubId);
                 return Optional.empty();
             }
         }
@@ -48,7 +47,7 @@ public class SnapshotService {
                 .setData(event.getPayload())
                 .build();
 
-        sensorsState.put(event.getId(), newState);
+        sensorsState.put(sensorId, newState);
 
         SensorsSnapshotAvro updatedSnapshot = SensorsSnapshotAvro.newBuilder()
                 .setHubId(hubId)

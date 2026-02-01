@@ -4,16 +4,20 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.grpc.telemetry.event.*;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 
+import java.time.Instant;
 import java.util.stream.Collectors;
 
 @Component
 public class GrpcEventMapper {
 
     public SensorEventAvro mapToAvro(SensorEventProto proto) {
+        long timestampMs = proto.getTimestamp().getSeconds() * 1000 +
+                proto.getTimestamp().getNanos() / 1000000;
+
         SensorEventAvro.Builder builder = SensorEventAvro.newBuilder()
                 .setId(proto.getId())
                 .setHubId(proto.getHubId())
-                .setTimestamp(proto.getTimestamp().getSeconds() * 1000 + proto.getTimestamp().getNanos() / 1000000);
+                .setTimestamp(Instant.ofEpochMilli(timestampMs));
 
         Object payload = switch (proto.getPayloadCase()) {
             case MOTION_SENSOR -> mapMotionSensor(proto.getMotionSensor());
@@ -65,9 +69,12 @@ public class GrpcEventMapper {
     }
 
     public HubEventAvro mapToAvro(HubEventProto proto) {
+        long timestampMs = proto.getTimestamp().getSeconds() * 1000 +
+                proto.getTimestamp().getNanos() / 1000000;
+
         HubEventAvro.Builder builder = HubEventAvro.newBuilder()
                 .setHubId(proto.getHubId())
-                .setTimestamp(proto.getTimestamp().getSeconds() * 1000 + proto.getTimestamp().getNanos() / 1000000);
+                .setTimestamp(Instant.ofEpochMilli(timestampMs));
 
         Object payload = switch (proto.getPayloadCase()) {
             case DEVICE_ADDED -> mapDeviceAdded(proto.getDeviceAdded());
