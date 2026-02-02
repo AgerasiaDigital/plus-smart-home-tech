@@ -92,6 +92,10 @@
                             <version>${grpc.version}</version>
                         </binaryMavenPlugin>
                     </binaryMavenPlugins>
+
+                    <dependencyScopes>
+                        <dependencyScope>compile</dependencyScope>
+                    </dependencyScopes>
                 </configuration>
 
                 <executions>
