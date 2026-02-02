@@ -7,7 +7,7 @@ import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto;
-import ru.yandex.practicum.grpc.telemetry.event.DeviceActionRequest;
+import ru.yandex.practicum.grpc.telemetry.hubrouter.DeviceActionRequest;
 import ru.yandex.practicum.grpc.telemetry.hubrouter.HubRouterControllerGrpc;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 import ru.yandex.practicum.telemetry.analyzer.model.*;
