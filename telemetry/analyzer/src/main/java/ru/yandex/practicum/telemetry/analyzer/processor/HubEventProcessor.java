@@ -13,7 +13,10 @@ import ru.yandex.practicum.telemetry.analyzer.entity.*;
 import ru.yandex.practicum.telemetry.analyzer.enums.ActionType;
 import ru.yandex.practicum.telemetry.analyzer.enums.ConditionOperation;
 import ru.yandex.practicum.telemetry.analyzer.enums.ConditionType;
-import ru.yandex.practicum.telemetry.analyzer.repository.*;
+import ru.yandex.practicum.telemetry.analyzer.repository.ActionRepository;
+import ru.yandex.practicum.telemetry.analyzer.repository.ConditionRepository;
+import ru.yandex.practicum.telemetry.analyzer.repository.ScenarioRepository;
+import ru.yandex.practicum.telemetry.analyzer.repository.SensorRepository;
 
 import java.time.Duration;
 import java.util.List;
