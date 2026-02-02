@@ -5,6 +5,10 @@ spring:
   application:
     name: collector
 
+grpc:
+  server:
+    port: 9090
+
 collector:
   kafka:
     producer:

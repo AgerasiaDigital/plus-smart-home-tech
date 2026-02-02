@@ -62,6 +62,25 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Модуль со схемами Avro - КРИТИЧЕСКИ ВАЖНО! -->
+        <dependency>
+            <groupId>ru.yandex.practicum</groupId>
+            <artifactId>avro-schemas</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Модуль со схемами Protobuf для gRPC -->
+        <dependency>
+            <groupId>ru.yandex.practicum</groupId>
+            <artifactId>proto-schemas</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- gRPC Server -->
+        <dependency>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-server-spring-boot-starter</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
