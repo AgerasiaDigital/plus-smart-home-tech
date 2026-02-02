@@ -8,15 +8,11 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: none
-    show-sql: true
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
 
 grpc:
   client:
@@ -43,4 +39,6 @@ analyzer:
         group.id: analyzer-hubs-group
         key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
         value.deserializer: ru.yandex.practicum.kafka.telemetry.serialization.HubEventDeserializer
-        enable.auto.commit: fa
+        enable.auto.commit: false
+        auto.offset.reset: earliest
+      topic: telemetry.hubs.v1
