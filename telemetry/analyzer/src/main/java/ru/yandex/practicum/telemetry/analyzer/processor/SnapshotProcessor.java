@@ -71,7 +71,7 @@ public class SnapshotProcessor {
         log.info("Found {} scenarios for hub: {}", scenarios.size(), hubId);
 
         for (Scenario scenario : scenarios) {
-            log.debug("Checking scenario: name={}, conditions={}, actions={}",
+            log.info("Checking scenario: name={}, conditions={}, actions={}",
                     scenario.getName(), scenario.getConditions().size(), scenario.getActions().size());
 
             boolean conditionsMet = checkScenarioConditions(scenario, sensorsState);
@@ -85,8 +85,8 @@ public class SnapshotProcessor {
 
     private boolean checkScenarioConditions(Scenario scenario, Map<String, SensorStateAvro> sensorsState) {
         if (scenario.getConditions().isEmpty()) {
-            log.warn("Scenario '{}' has no conditions", scenario.getName());
-            return false;
+            log.info("Scenario '{}' has no conditions - executing unconditionally", scenario.getName());
+            return true;
         }
 
         for (ScenarioCondition scenarioCondition : scenario.getConditions()) {
@@ -109,7 +109,7 @@ public class SnapshotProcessor {
         SensorStateAvro state = sensorsState.get(sensorId);
 
         if (state == null) {
-            log.debug("No state found for sensor: {}", sensorId);
+            log.warn("No state found for sensor: {} in snapshot", sensorId);
             return false;
         }
 
@@ -118,14 +118,14 @@ public class SnapshotProcessor {
 
         Integer actualValue = extractValue(data, condition.getType());
         if (actualValue == null) {
-            log.debug("Could not extract value from data: type={}, data={}",
-                    condition.getType(), data.getClass().getSimpleName());
+            log.warn("Could not extract value from data: type={}, data={}, sensor={}",
+                    condition.getType(), data.getClass().getSimpleName(), sensorId);
             return false;
         }
 
         boolean result = evaluateCondition(actualValue, condition.getOperation(), condition.getValue());
-        log.debug("Evaluated condition: actual={}, operation={}, expected={}, result={}",
-                actualValue, condition.getOperation(), condition.getValue(), result);
+        log.info("Evaluated condition for sensor {}: actual={}, operation={}, expected={}, result={}",
+                sensorId, actualValue, condition.getOperation(), condition.getValue(), result);
 
         return result;
     }
