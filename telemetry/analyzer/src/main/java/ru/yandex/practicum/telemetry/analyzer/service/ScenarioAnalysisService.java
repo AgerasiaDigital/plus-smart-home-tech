@@ -70,12 +70,20 @@ public class ScenarioAnalysisService {
         String sensorId = scenarioCondition.getSensor().getId();
         SensorStateAvro sensorState = sensorStates.get(sensorId);
         
+        log.info("🔍 Evaluating condition: sensor={}, type={}, operation={}, expectedValue={}", 
+                sensorId, 
+                scenarioCondition.getCondition().getType(),
+                scenarioCondition.getCondition().getOperation(),
+                scenarioCondition.getCondition().getValue());
+        
         if (sensorState == null) {
-            log.warn("Sensor state not found for sensor: {}", sensorId);
+            log.warn("❌ Sensor state not found for sensor: {}", sensorId);
             return false;
         }
 
-        return createConditionPredicate(scenarioCondition).test(sensorState);
+        boolean result = createConditionPredicate(scenarioCondition).test(sensorState);
+        log.info("🎯 Condition result for sensor {}: {}", sensorId, result);
+        return result;
     }
 
     private Predicate<SensorStateAvro> createConditionPredicate(ScenarioCondition scenarioCondition) {
@@ -148,11 +156,18 @@ public class ScenarioAnalysisService {
     }
 
     private DeviceActionProto convertToDeviceAction(ScenarioAction scenarioAction) {
-        return DeviceActionProto.newBuilder()
+        DeviceActionProto action = DeviceActionProto.newBuilder()
                 .setSensorId(scenarioAction.getSensor().getId())
                 .setType(ru.yandex.practicum.grpc.telemetry.event.ActionTypeProto.valueOf(
                         scenarioAction.getAction().getType()))
                 .setValue(scenarioAction.getAction().getValue())
                 .build();
+                
+        log.info("🔥 SCENARIO {} MATCHED! Sending command {} for sensor {}", 
+                scenarioAction.getScenario().getName(), 
+                action.getType(), 
+                action.getSensorId());
+                
+        return action;
     }
 }

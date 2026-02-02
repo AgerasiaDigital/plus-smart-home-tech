@@ -103,7 +103,7 @@ public class SnapshotProcessor {
     }
 
     private void sendDeviceAction(String hubId, DeviceActionProto action) {
-        log.info("Preparing to send gRPC request to hub-router for hub: {}, sensor: {}, action: {}", 
+        log.info("🚀 SENDING gRPC COMMAND: hub={}, sensor={}, action={}", 
                 hubId, action.getSensorId(), action.getType());
                 
         DeviceActionRequest request = 
@@ -118,11 +118,11 @@ public class SnapshotProcessor {
                 .build();
 
         try {
-            log.info("Sending gRPC request to hub-router...");
+            log.info("📡 Calling hubRouterClient.handleDeviceAction() to localhost:59091...");
             hubRouterClient.handleDeviceAction(request);
-            log.info("Successfully sent device action for sensor: {} in hub: {}", action.getSensorId(), hubId);
+            log.info("✅ SUCCESS: gRPC command sent for sensor {} in hub {}", action.getSensorId(), hubId);
         } catch (Exception e) {
-            log.error("Failed to send gRPC request: {}", e.getMessage(), e);
+            log.error("❌ FAILED to send gRPC request: {}", e.getMessage(), e);
             throw e;
         }
     }
