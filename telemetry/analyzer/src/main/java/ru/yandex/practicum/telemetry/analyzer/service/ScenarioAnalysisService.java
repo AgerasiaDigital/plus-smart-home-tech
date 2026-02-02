@@ -27,21 +27,43 @@ public class ScenarioAnalysisService {
 
     public List<DeviceActionProto> analyzeSnapshot(SensorsSnapshotAvro snapshot) {
         String hubId = snapshot.getHubId();
-        log.debug("Analyzing snapshot for hub: {}", hubId);
+        log.info("Analyzing snapshot for hub: {}", hubId);
 
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
+        log.info("Found {} scenarios for hub: {}", scenarios.size(), hubId);
+        
         Map<String, SensorStateAvro> sensorStates = snapshot.getSensorsState();
+        log.info("Snapshot contains {} sensor states", sensorStates.size());
 
-        return scenarios.stream()
-                .filter(scenario -> evaluateScenario(scenario, sensorStates))
-                .flatMap(scenario -> scenario.getActions().stream())
+        List<DeviceActionProto> actions = scenarios.stream()
+                .filter(scenario -> {
+                    boolean matches = evaluateScenario(scenario, sensorStates);
+                    log.info("Scenario '{}' evaluation result: {}", scenario.getName(), matches);
+                    return matches;
+                })
+                .flatMap(scenario -> {
+                    log.info("Processing actions for scenario: {}", scenario.getName());
+                    return scenario.getActions().stream();
+                })
                 .map(this::convertToDeviceAction)
                 .collect(Collectors.toList());
+                
+        log.info("Generated {} actions for hub: {}", actions.size(), hubId);
+        return actions;
     }
 
     private boolean evaluateScenario(Scenario scenario, Map<String, SensorStateAvro> sensorStates) {
-        return scenario.getConditions().stream()
-                .allMatch(condition -> evaluateCondition(condition, sensorStates));
+        log.info("Evaluating scenario '{}' with {} conditions", scenario.getName(), scenario.getConditions().size());
+        
+        boolean result = scenario.getConditions().stream()
+                .allMatch(condition -> {
+                    boolean conditionResult = evaluateCondition(condition, sensorStates);
+                    log.info("Condition for sensor {} evaluated to: {}", condition.getSensor().getId(), conditionResult);
+                    return conditionResult;
+                });
+                
+        log.info("Scenario '{}' overall result: {}", scenario.getName(), result);
+        return result;
     }
 
     private boolean evaluateCondition(ScenarioCondition scenarioCondition, Map<String, SensorStateAvro> sensorStates) {
