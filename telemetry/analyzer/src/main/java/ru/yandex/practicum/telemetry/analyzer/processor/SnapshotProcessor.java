@@ -10,6 +10,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.grpc.telemetry.event.DeviceActionProto;
+import ru.yandex.practicum.grpc.telemetry.event.DeviceActionRequest;
 import ru.yandex.practicum.grpc.telemetry.hubrouter.HubRouterControllerGrpc.HubRouterControllerBlockingStub;
 import ru.yandex.practicum.kafka.telemetry.event.SensorsSnapshotAvro;
 import ru.yandex.practicum.telemetry.analyzer.service.ScenarioAnalysisService;
@@ -100,8 +101,8 @@ public class SnapshotProcessor {
     }
 
     private void sendDeviceAction(String hubId, DeviceActionProto action) {
-        ru.yandex.practicum.grpc.telemetry.hubrouter.DeviceActionRequest request = 
-            ru.yandex.practicum.grpc.telemetry.hubrouter.DeviceActionRequest.newBuilder()
+        DeviceActionRequest request = 
+            DeviceActionRequest.newBuilder()
                 .setHubId(hubId)
                 .setScenarioName("analyzer-scenario")
                 .setAction(action)
