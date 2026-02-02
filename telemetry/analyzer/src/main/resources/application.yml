@@ -36,7 +36,7 @@ app:
         group-id: analyzer-snapshot-group
         topic: telemetry.snapshots.v1
         key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value-deserializer: ru.yandex.practicum.kafka.telemetry.serialization.AvroDeserializer
+        value-deserializer: ru.yandex.practicum.kafka.telemetry.serialization.SensorsSnapshotDeserializer
         auto-offset-reset: latest
         enable-auto-commit: false
         auto-commit-interval-ms: 1000
@@ -46,7 +46,7 @@ app:
         group-id: analyzer-hub-events-group
         topic: telemetry.hubs.v1
         key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-        value-deserializer: ru.yandex.practicum.kafka.telemetry.serialization.AvroDeserializer
+        value-deserializer: ru.yandex.practicum.kafka.telemetry.serialization.HubEventDeserializer
         auto-offset-reset: earliest
         enable-auto-commit: true
         auto-commit-interval-ms: 5000

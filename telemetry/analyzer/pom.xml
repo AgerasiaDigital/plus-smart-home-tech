@@ -96,24 +96,23 @@
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <configuration>
-                    <protocVersion>${protobuf.version}</protocVersion>
-                    <dependencyResolutionDepth>DIRECT</dependencyResolutionDepth>
-                    <plugins>
-                        <plugin>
-                            <id>grpc-java</id>
-                            <groupId>io.grpc</groupId>
-                            <artifactId>protoc-gen-grpc-java</artifactId>
-                            <version>${grpc.version}</version>
-                            <mainClass>io.grpc.protoc.gen.java.JavaGrpcGenerator</mainClass>
-                        </plugin>
-                    </plugins>
-                </configuration>
                 <executions>
                     <execution>
                         <goals>
                             <goal>generate</goal>
                         </goals>
+                        <configuration>
+                            <protocVersion>${protobuf.version}</protocVersion>
+                            <dependencyResolutionDepth>DIRECT</dependencyResolutionDepth>
+                            <plugins>
+                                <plugin>
+                                    <id>grpc-java</id>
+                                    <groupId>io.grpc</groupId>
+                                    <artifactId>protoc-gen-grpc-java</artifactId>
+                                    <version>${grpc.version}</version>
+                                </plugin>
+                            </plugins>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
