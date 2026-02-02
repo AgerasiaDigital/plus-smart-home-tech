@@ -1,0 +1,58 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: analyzer
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5433/analyzer_db
+    username: analyzer_user
+    password: analyzer_password
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+grpc:
+  client:
+    hub-router:
+      address: 'static://localhost:59090'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+
+app:
+  kafka:
+    consumer:
+      snapshot:
+        bootstrap-servers: localhost:9092
+        group-id: analyzer-snapshot-group
+        topic: telemetry.snapshots.v1
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: ru.yandex.practicum.kafka.telemetry.serialization.AvroDeserializer
+        auto-offset-reset: latest
+        enable-auto-commit: false
+        auto-commit-interval-ms: 1000
+      
+      hub-events:
+        bootstrap-servers: localhost:9092
+        group-id: analyzer-hub-events-group
+        topic: telemetry.hubs.v1
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: ru.yandex.practicum.kafka.telemetry.serialization.AvroDeserializer
+        auto-offset-reset: earliest
+        enable-auto-commit: true
+        auto-commit-interval-ms: 5000
+
+logging:
+  level:
+    ru.yandex.practicum.telemetry.analyzer: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN

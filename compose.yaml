@@ -33,3 +33,20 @@ services:
                              --partitions 1 --replication-factor 1 --if-not-exists \
                              --bootstrap-server kafka:29092'"
     init: true
+
+  analyzer-db:
+    image: postgres:15
+    container_name: analyzer-db
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: analyzer_db
+      POSTGRES_USER: analyzer_user
+      POSTGRES_PASSWORD: analyzer_password
+    volumes:
+      - analyzer_db_data:/var/lib/postgresql/data
+      - ./telemetry/analyzer/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+volumes:
+  analyzer_db_data:
