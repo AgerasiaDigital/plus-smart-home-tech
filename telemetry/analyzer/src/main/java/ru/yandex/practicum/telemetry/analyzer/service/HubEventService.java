@@ -26,6 +26,8 @@ public class HubEventService {
         String hubId = hubEvent.getHubId();
         Object payload = hubEvent.getPayload();
         
+        log.info("Processing hub event for hub: {}, payload type: {}", hubId, payload.getClass().getSimpleName());
+        
         if (payload instanceof ru.yandex.practicum.kafka.telemetry.event.DeviceAddedEventAvro deviceAdded) {
             handleDeviceAdded(hubId, deviceAdded);
         } else if (payload instanceof ru.yandex.practicum.kafka.telemetry.event.DeviceRemovedEventAvro deviceRemoved) {

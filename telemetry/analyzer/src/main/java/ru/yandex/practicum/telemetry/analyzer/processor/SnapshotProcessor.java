@@ -85,19 +85,21 @@ public class SnapshotProcessor {
     }
 
     private void processSnapshot(SensorsSnapshotAvro snapshot) {
-        log.debug("Processing snapshot for hub: {}", snapshot.getHubId());
+        log.info("Processing snapshot for hub: {}", snapshot.getHubId());
         
         List<DeviceActionProto> actions = scenarioAnalysisService.analyzeSnapshot(snapshot);
+        log.info("Found {} actions for hub: {}", actions.size(), snapshot.getHubId());
         
         for (DeviceActionProto action : actions) {
             try {
+                log.info("Sending action {} for sensor {} in hub {}", action.getType(), action.getSensorId(), snapshot.getHubId());
                 sendDeviceAction(snapshot.getHubId(), action);
             } catch (Exception e) {
                 log.error("Error sending device action: {}", e.getMessage(), e);
             }
         }
         
-        log.debug("Processed {} actions for hub: {}", actions.size(), snapshot.getHubId());
+        log.info("Processed {} actions for hub: {}", actions.size(), snapshot.getHubId());
     }
 
     private void sendDeviceAction(String hubId, DeviceActionProto action) {
