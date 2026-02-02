@@ -14,9 +14,9 @@ import ru.yandex.practicum.telemetry.analyzer.model.*;
 import ru.yandex.practicum.telemetry.analyzer.repository.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -48,14 +48,23 @@ public class ScenarioService {
 
     @Transactional
     public void addScenario(String hubId, ScenarioAddedEventAvro event) {
-        Scenario scenario = scenarioRepository.findByHubIdAndName(hubId, event.getName())
-                .orElse(new Scenario());
+        log.info("Adding scenario: hubId={}, name={}", hubId, event.getName());
+
+        scenarioRepository.findByHubIdAndName(hubId, event.getName())
+                .ifPresent(existing -> {
+                    log.info("Deleting existing scenario: {}", existing.getId());
+                    scenarioRepository.delete(existing);
+                    scenarioRepository.flush();
+                });
+
+        Scenario scenario = new Scenario();
         scenario.setHubId(hubId);
         scenario.setName(event.getName());
+        scenario = scenarioRepository.saveAndFlush(scenario);
 
-        scenario.getConditions().clear();
-        scenario.getActions().clear();
+        log.info("Scenario saved with id: {}", scenario.getId());
 
+        List<ScenarioCondition> conditions = new ArrayList<>();
         for (ScenarioConditionAvro conditionAvro : event.getConditions()) {
             Sensor sensor = sensorRepository.findById(conditionAvro.getSensorId())
                     .orElseThrow(() -> new IllegalArgumentException("Sensor not found: " + conditionAvro.getSensorId()));
@@ -71,15 +80,24 @@ public class ScenarioService {
                 condition.setValue((Integer) value);
             }
 
-            conditionRepository.save(condition);
+            condition = conditionRepository.saveAndFlush(condition);
+            log.info("Saved condition: id={}, type={}, operation={}, value={}",
+                    condition.getId(), condition.getType(), condition.getOperation(), condition.getValue());
 
             ScenarioCondition scenarioCondition = new ScenarioCondition();
+            ScenarioConditionId scId = new ScenarioConditionId();
+            scId.setScenarioId(scenario.getId());
+            scId.setSensorId(sensor.getId());
+            scId.setConditionId(condition.getId());
+            scenarioCondition.setId(scId);
             scenarioCondition.setScenario(scenario);
             scenarioCondition.setSensor(sensor);
             scenarioCondition.setCondition(condition);
-            scenario.getConditions().add(scenarioCondition);
+            conditions.add(scenarioCondition);
         }
+        scenario.getConditions().addAll(conditions);
 
+        List<ScenarioAction> actions = new ArrayList<>();
         for (DeviceActionAvro actionAvro : event.getActions()) {
             Sensor sensor = sensorRepository.findById(actionAvro.getSensorId())
                     .orElseThrow(() -> new IllegalArgumentException("Sensor not found: " + actionAvro.getSensorId()));
@@ -87,17 +105,26 @@ public class ScenarioService {
             Action action = new Action();
             action.setType(ActionType.valueOf(actionAvro.getType().name()));
             action.setValue((Integer) actionAvro.getValue());
-            actionRepository.save(action);
+            action = actionRepository.saveAndFlush(action);
+            log.info("Saved action: id={}, type={}, value={}",
+                    action.getId(), action.getType(), action.getValue());
 
             ScenarioAction scenarioAction = new ScenarioAction();
+            ScenarioActionId saId = new ScenarioActionId();
+            saId.setScenarioId(scenario.getId());
+            saId.setSensorId(sensor.getId());
+            saId.setActionId(action.getId());
+            scenarioAction.setId(saId);
             scenarioAction.setScenario(scenario);
             scenarioAction.setSensor(sensor);
             scenarioAction.setAction(action);
-            scenario.getActions().add(scenarioAction);
+            actions.add(scenarioAction);
         }
+        scenario.getActions().addAll(actions);
 
-        scenarioRepository.save(scenario);
-        log.info("Scenario added: hubId={}, name={}", hubId, event.getName());
+        scenarioRepository.saveAndFlush(scenario);
+        log.info("Scenario added successfully: hubId={}, name={}, conditions={}, actions={}",
+                hubId, event.getName(), scenario.getConditions().size(), scenario.getActions().size());
     }
 
     @Transactional
@@ -114,28 +141,44 @@ public class ScenarioService {
         String hubId = snapshot.getHubId();
         List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
 
-        log.debug("Processing snapshot for hubId={}, scenarios count={}", hubId, scenarios.size());
+        log.info("Processing snapshot for hubId={}, scenarios count={}", hubId, scenarios.size());
 
-        scenarios.stream()
-                .filter(scenario -> checkScenarioConditions(scenario, snapshot))
-                .forEach(scenario -> executeScenarioActions(scenario, snapshot));
+        for (Scenario scenario : scenarios) {
+            log.info("Checking scenario: {}, conditions: {}, actions: {}",
+                    scenario.getName(), scenario.getConditions().size(), scenario.getActions().size());
+
+            if (checkScenarioConditions(scenario, snapshot)) {
+                log.info("Scenario conditions met: {}", scenario.getName());
+                executeScenarioActions(scenario, snapshot);
+            } else {
+                log.debug("Scenario conditions not met: {}", scenario.getName());
+            }
+        }
     }
 
     private boolean checkScenarioConditions(Scenario scenario, SensorsSnapshotAvro snapshot) {
         Map<String, SensorStateAvro> sensorsState = snapshot.getSensorsState();
 
-        return scenario.getConditions().stream()
-                .allMatch(sc -> {
-                    String sensorId = sc.getSensor().getId();
-                    SensorStateAvro state = sensorsState.get(sensorId);
+        for (ScenarioCondition sc : scenario.getConditions()) {
+            String sensorId = sc.getSensor().getId();
+            SensorStateAvro state = sensorsState.get(sensorId);
 
-                    if (state == null) {
-                        log.debug("Sensor state not found: sensorId={}", sensorId);
-                        return false;
-                    }
+            if (state == null) {
+                log.debug("Sensor state not found: sensorId={}", sensorId);
+                return false;
+            }
 
-                    return checkCondition(sc.getCondition(), state.getData());
-                });
+            boolean conditionMet = checkCondition(sc.getCondition(), state.getData());
+            log.debug("Condition check: sensor={}, type={}, operation={}, expected={}, result={}",
+                    sensorId, sc.getCondition().getType(), sc.getCondition().getOperation(),
+                    sc.getCondition().getValue(), conditionMet);
+
+            if (!conditionMet) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private boolean checkCondition(Condition condition, Object sensorData) {
@@ -143,8 +186,12 @@ public class ScenarioService {
         Integer expectedValue = condition.getValue();
 
         if (actualValue == null) {
+            log.debug("Could not extract value for type: {}", condition.getType());
             return false;
         }
+
+        log.debug("Comparing: actual={}, expected={}, operation={}",
+                actualValue, expectedValue, condition.getOperation());
 
         return switch (condition.getOperation()) {
             case EQUALS -> actualValue.equals(expectedValue);
@@ -179,17 +226,16 @@ public class ScenarioService {
     private void executeScenarioActions(Scenario scenario, SensorsSnapshotAvro snapshot) {
         log.info("Executing scenario: hubId={}, scenario={}", scenario.getHubId(), scenario.getName());
 
-        List<DeviceActionProto> actions = scenario.getActions().stream()
-                .map(this::toDeviceActionProto)
-                .collect(Collectors.toList());
-
-        if (actions.isEmpty()) {
+        if (scenario.getActions().isEmpty()) {
+            log.warn("No actions for scenario: {}", scenario.getName());
             return;
         }
 
-        for (DeviceActionProto action : actions) {
+        for (ScenarioAction scenarioAction : scenario.getActions()) {
             try {
+                DeviceActionProto action = toDeviceActionProto(scenarioAction);
                 Instant timestamp = snapshot.getTimestamp();
+
                 DeviceActionRequest request = DeviceActionRequest.newBuilder()
                         .setHubId(scenario.getHubId())
                         .setScenarioName(scenario.getName())
@@ -200,8 +246,12 @@ public class ScenarioService {
                                 .build())
                         .build();
 
+                log.info("Sending action to Hub Router: hubId={}, scenario={}, sensor={}, type={}",
+                        scenario.getHubId(), scenario.getName(), action.getSensorId(), action.getType());
+
                 hubRouterClient.handleDeviceAction(request);
-                log.info("Action executed: hubId={}, scenario={}, sensor={}",
+
+                log.info("Action executed successfully: hubId={}, scenario={}, sensor={}",
                         scenario.getHubId(), scenario.getName(), action.getSensorId());
             } catch (Exception e) {
                 log.error("Error executing action for scenario: {}", scenario.getName(), e);

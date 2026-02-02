@@ -32,8 +32,8 @@ public class SnapshotProcessor {
 
                 records.forEach(record -> {
                     SensorsSnapshotAvro snapshot = record.value();
-                    log.debug("Processing snapshot: hubId={}, timestamp={}",
-                            snapshot.getHubId(), snapshot.getTimestamp());
+                    log.info("Processing snapshot: hubId={}, timestamp={}, sensors={}",
+                            snapshot.getHubId(), snapshot.getTimestamp(), snapshot.getSensorsState().size());
 
                     try {
                         scenarioService.processSnapshot(snapshot);
@@ -42,7 +42,14 @@ public class SnapshotProcessor {
                     }
                 });
 
-                consumer.commitSync();
+                if (!records.isEmpty()) {
+                    try {
+                        consumer.commitSync();
+                        log.debug("Committed {} snapshot records", records.count());
+                    } catch (Exception e) {
+                        log.error("Error committing offsets", e);
+                    }
+                }
             }
         } catch (WakeupException e) {
             log.info("SnapshotProcessor wakeup");
@@ -51,6 +58,8 @@ public class SnapshotProcessor {
         } finally {
             try {
                 consumer.commitSync();
+            } catch (Exception e) {
+                log.error("Error in final commit", e);
             } finally {
                 log.info("Closing SnapshotProcessor consumer");
                 consumer.close();

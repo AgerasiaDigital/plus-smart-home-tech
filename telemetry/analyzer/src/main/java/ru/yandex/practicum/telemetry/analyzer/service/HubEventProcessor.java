@@ -34,7 +34,7 @@ public class HubEventProcessor implements Runnable {
                     String hubId = event.getHubId();
                     Object payload = event.getPayload();
 
-                    log.debug("Processing hub event: hubId={}, type={}", hubId, payload.getClass().getSimpleName());
+                    log.info("Processing hub event: hubId={}, type={}", hubId, payload.getClass().getSimpleName());
 
                     try {
                         if (payload instanceof DeviceAddedEventAvro deviceAdded) {
@@ -51,11 +51,14 @@ public class HubEventProcessor implements Runnable {
                     }
                 });
 
-                consumer.commitAsync((offsets, exception) -> {
-                    if (exception != null) {
-                        log.error("Error committing offsets", exception);
+                if (!records.isEmpty()) {
+                    try {
+                        consumer.commitSync();
+                        log.debug("Committed {} hub event records", records.count());
+                    } catch (Exception e) {
+                        log.error("Error committing offsets", e);
                     }
-                });
+                }
             }
         } catch (WakeupException e) {
             log.info("HubEventProcessor wakeup");
@@ -64,6 +67,8 @@ public class HubEventProcessor implements Runnable {
         } finally {
             try {
                 consumer.commitSync();
+            } catch (Exception e) {
+                log.error("Error in final commit", e);
             } finally {
                 log.info("Closing HubEventProcessor consumer");
                 consumer.close();
