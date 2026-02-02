@@ -1,13 +1,12 @@
 package ru.yandex.practicum.telemetry.analyzer.processor;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 import ru.yandex.practicum.telemetry.analyzer.entity.*;
 import ru.yandex.practicum.telemetry.analyzer.enums.ActionType;
@@ -24,7 +23,6 @@ import java.util.Optional;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class HubEventProcessor implements Runnable {
 
     private final KafkaConsumer<String, HubEventAvro> consumer;
@@ -33,6 +31,24 @@ public class HubEventProcessor implements Runnable {
     private final ScenarioRepository scenarioRepository;
     private final ConditionRepository conditionRepository;
     private final ActionRepository actionRepository;
+    private final TransactionTemplate transactionTemplate;
+
+    public HubEventProcessor(
+            KafkaConsumer<String, HubEventAvro> consumer,
+            String hubsTopic,
+            SensorRepository sensorRepository,
+            ScenarioRepository scenarioRepository,
+            ConditionRepository conditionRepository,
+            ActionRepository actionRepository,
+            TransactionTemplate transactionTemplate) {
+        this.consumer = consumer;
+        this.hubsTopic = hubsTopic;
+        this.sensorRepository = sensorRepository;
+        this.scenarioRepository = scenarioRepository;
+        this.conditionRepository = conditionRepository;
+        this.actionRepository = actionRepository;
+        this.transactionTemplate = transactionTemplate;
+    }
 
     @Override
     public void run() {
@@ -46,7 +62,15 @@ public class HubEventProcessor implements Runnable {
                 ConsumerRecords<String, HubEventAvro> records = consumer.poll(Duration.ofSeconds(5));
 
                 for (ConsumerRecord<String, HubEventAvro> record : records) {
-                    processEvent(record.value());
+                    log.info("Processing hub event: key={}, value={}", record.key(), record.value());
+                    transactionTemplate.executeWithoutResult(status -> {
+                        try {
+                            processEvent(record.value());
+                        } catch (Exception e) {
+                            log.error("Error processing event", e);
+                            status.setRollbackOnly();
+                        }
+                    });
                 }
 
                 consumer.commitSync();
@@ -66,10 +90,11 @@ public class HubEventProcessor implements Runnable {
         }
     }
 
-    @Transactional
     public void processEvent(HubEventAvro event) {
         String hubId = event.getHubId();
         Object payload = event.getPayload();
+
+        log.info("Processing event for hub: {}, payload type: {}", hubId, payload.getClass().getSimpleName());
 
         if (payload instanceof DeviceAddedEventAvro deviceAdded) {
             handleDeviceAdded(hubId, deviceAdded);
@@ -105,6 +130,8 @@ public class HubEventProcessor implements Runnable {
     }
 
     private void handleScenarioAdded(String hubId, ScenarioAddedEventAvro event) {
+        log.info("Adding scenario: name={}, hubId={}", event.getName(), hubId);
+
         Optional<Scenario> existing = scenarioRepository.findByHubIdAndName(hubId, event.getName());
 
         Scenario scenario;
@@ -119,6 +146,7 @@ public class HubEventProcessor implements Runnable {
             scenario.setName(event.getName());
         }
 
+        log.info("Processing {} conditions", event.getConditions().size());
         for (ScenarioConditionAvro condAvro : event.getConditions()) {
             Sensor sensor = sensorRepository.findByIdAndHubId(condAvro.getSensorId(), hubId)
                     .orElseGet(() -> {
@@ -140,6 +168,8 @@ public class HubEventProcessor implements Runnable {
             }
 
             conditionRepository.save(condition);
+            log.debug("Saved condition: type={}, operation={}, value={}",
+                    condition.getType(), condition.getOperation(), condition.getValue());
 
             ScenarioCondition scenarioCondition = new ScenarioCondition();
             scenarioCondition.setScenario(scenario);
@@ -148,6 +178,7 @@ public class HubEventProcessor implements Runnable {
             scenario.getConditions().add(scenarioCondition);
         }
 
+        log.info("Processing {} actions", event.getActions().size());
         for (DeviceActionAvro actAvro : event.getActions()) {
             Sensor sensor = sensorRepository.findByIdAndHubId(actAvro.getSensorId(), hubId)
                     .orElseGet(() -> {
@@ -161,6 +192,7 @@ public class HubEventProcessor implements Runnable {
             action.setType(ActionType.valueOf(actAvro.getType().name()));
             action.setValue(actAvro.getValue());
             actionRepository.save(action);
+            log.debug("Saved action: type={}, value={}", action.getType(), action.getValue());
 
             ScenarioAction scenarioAction = new ScenarioAction();
             scenarioAction.setScenario(scenario);
@@ -170,7 +202,8 @@ public class HubEventProcessor implements Runnable {
         }
 
         scenarioRepository.save(scenario);
-        log.info("Scenario saved: name={}, hubId={}", event.getName(), hubId);
+        log.info("Scenario saved: name={}, hubId={}, conditions={}, actions={}",
+                event.getName(), hubId, scenario.getConditions().size(), scenario.getActions().size());
     }
 
     private void handleScenarioRemoved(String hubId, ScenarioRemovedEventAvro event) {

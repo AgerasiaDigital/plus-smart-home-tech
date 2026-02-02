@@ -17,7 +17,6 @@ import ru.yandex.practicum.telemetry.analyzer.service.ActionExecutor;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 @Slf4j
 @Component
@@ -40,6 +39,8 @@ public class SnapshotProcessor {
                 ConsumerRecords<String, SensorsSnapshotAvro> records = consumer.poll(Duration.ofMillis(1000));
 
                 for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
+                    log.info("Received snapshot: hubId={}, timestamp={}",
+                            record.value().getHubId(), record.value().getTimestamp());
                     processSnapshot(record.value());
                 }
 
@@ -64,16 +65,43 @@ public class SnapshotProcessor {
         String hubId = snapshot.getHubId();
         Map<String, SensorStateAvro> sensorsState = snapshot.getSensorsState();
 
-        List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
+        log.info("Processing snapshot for hub: {}, sensors count: {}", hubId, sensorsState.size());
 
-        scenarios.stream()
-                .filter(scenario -> checkScenarioConditions(scenario, sensorsState))
-                .forEach(scenario -> executeScenarioActions(scenario));
+        List<Scenario> scenarios = scenarioRepository.findByHubId(hubId);
+        log.info("Found {} scenarios for hub: {}", scenarios.size(), hubId);
+
+        for (Scenario scenario : scenarios) {
+            log.debug("Checking scenario: name={}, conditions={}, actions={}",
+                    scenario.getName(), scenario.getConditions().size(), scenario.getActions().size());
+
+            boolean conditionsMet = checkScenarioConditions(scenario, sensorsState);
+            log.info("Scenario '{}' conditions met: {}", scenario.getName(), conditionsMet);
+
+            if (conditionsMet) {
+                executeScenarioActions(scenario);
+            }
+        }
     }
 
     private boolean checkScenarioConditions(Scenario scenario, Map<String, SensorStateAvro> sensorsState) {
-        return scenario.getConditions().stream()
-                .allMatch(scenarioCondition -> checkCondition(scenarioCondition, sensorsState));
+        if (scenario.getConditions().isEmpty()) {
+            log.warn("Scenario '{}' has no conditions", scenario.getName());
+            return false;
+        }
+
+        for (ScenarioCondition scenarioCondition : scenario.getConditions()) {
+            boolean conditionMet = checkCondition(scenarioCondition, sensorsState);
+            log.debug("Condition check: sensor={}, type={}, met={}",
+                    scenarioCondition.getSensor().getId(),
+                    scenarioCondition.getCondition().getType(),
+                    conditionMet);
+
+            if (!conditionMet) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private boolean checkCondition(ScenarioCondition scenarioCondition, Map<String, SensorStateAvro> sensorsState) {
@@ -81,6 +109,7 @@ public class SnapshotProcessor {
         SensorStateAvro state = sensorsState.get(sensorId);
 
         if (state == null) {
+            log.debug("No state found for sensor: {}", sensorId);
             return false;
         }
 
@@ -89,10 +118,16 @@ public class SnapshotProcessor {
 
         Integer actualValue = extractValue(data, condition.getType());
         if (actualValue == null) {
+            log.debug("Could not extract value from data: type={}, data={}",
+                    condition.getType(), data.getClass().getSimpleName());
             return false;
         }
 
-        return evaluateCondition(actualValue, condition.getOperation(), condition.getValue());
+        boolean result = evaluateCondition(actualValue, condition.getOperation(), condition.getValue());
+        log.debug("Evaluated condition: actual={}, operation={}, expected={}, result={}",
+                actualValue, condition.getOperation(), condition.getValue(), result);
+
+        return result;
     }
 
     private Integer extractValue(Object data, ConditionType type) {
@@ -115,6 +150,7 @@ public class SnapshotProcessor {
 
     private boolean evaluateCondition(Integer actualValue, ConditionOperation operation, Integer expectedValue) {
         if (expectedValue == null) {
+            log.debug("Expected value is null, condition passes");
             return true;
         }
 
@@ -126,10 +162,14 @@ public class SnapshotProcessor {
     }
 
     private void executeScenarioActions(Scenario scenario) {
-        log.info("Executing scenario: name={}, hubId={}", scenario.getName(), scenario.getHubId());
+        log.info("Executing scenario: name={}, hubId={}, actions count={}",
+                scenario.getName(), scenario.getHubId(), scenario.getActions().size());
 
-        scenario.getActions().forEach(scenarioAction ->
-                actionExecutor.executeAction(scenario.getHubId(), scenario.getName(), scenarioAction)
-        );
+        scenario.getActions().forEach(scenarioAction -> {
+            log.info("Executing action: sensor={}, type={}",
+                    scenarioAction.getSensor().getId(),
+                    scenarioAction.getAction().getType());
+            actionExecutor.executeAction(scenario.getHubId(), scenario.getName(), scenarioAction);
+        });
     }
 }
