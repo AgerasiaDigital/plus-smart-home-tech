@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.Properties;
 
 @Getter
@@ -14,6 +15,7 @@ import java.util.Properties;
 public class KafkaConfig {
     private ConsumerConfig snapshotConsumer;
     private ConsumerConfig hubEventConsumer;
+    private long pollTimeoutMs = 1000;
 
     @Getter
     @Setter
@@ -21,7 +23,7 @@ public class KafkaConfig {
         private Properties properties;
         private String topic;
 
-        public ConsumerConfig(java.util.Map<String, String> properties, String topic) {
+        public ConsumerConfig(Map<String, String> properties, String topic) {
             this.properties = new Properties();
             this.properties.putAll(properties);
             this.topic = topic;

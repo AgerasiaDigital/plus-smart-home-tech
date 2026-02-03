@@ -28,6 +28,7 @@ grpc:
 
 analyzer:
   kafka:
+    poll-timeout-ms: 1000
     snapshot-consumer:
       properties:
         bootstrap.servers: localhost:9092

@@ -41,9 +41,12 @@ public class ScenarioService {
     }
 
     @Transactional
-    public void removeDevice(String sensorId) {
-        sensorRepository.deleteById(sensorId);
-        log.info("Device removed: sensorId={}", sensorId);
+    public void removeDevice(String hubId, String sensorId) {
+        sensorRepository.findByIdAndHubId(sensorId, hubId)
+                .ifPresent(sensor -> {
+                    sensorRepository.delete(sensor);
+                    log.info("Device removed: hubId={}, sensorId={}", hubId, sensorId);
+                });
     }
 
     @Transactional
@@ -60,7 +63,7 @@ public class ScenarioService {
         Scenario scenario = new Scenario();
         scenario.setHubId(hubId);
         scenario.setName(event.getName());
-        scenario = scenarioRepository.saveAndFlush(scenario);
+        scenario = scenarioRepository.save(scenario);
 
         log.info("Scenario saved with id: {}", scenario.getId());
 
@@ -80,7 +83,7 @@ public class ScenarioService {
                 condition.setValue((Integer) value);
             }
 
-            condition = conditionRepository.saveAndFlush(condition);
+            condition = conditionRepository.save(condition);
             log.info("Saved condition: id={}, type={}, operation={}, value={}",
                     condition.getId(), condition.getType(), condition.getOperation(), condition.getValue());
 
@@ -105,7 +108,7 @@ public class ScenarioService {
             Action action = new Action();
             action.setType(ActionType.valueOf(actionAvro.getType().name()));
             action.setValue((Integer) actionAvro.getValue());
-            action = actionRepository.saveAndFlush(action);
+            action = actionRepository.save(action);
             log.info("Saved action: id={}, type={}, value={}",
                     action.getId(), action.getType(), action.getValue());
 
@@ -122,7 +125,7 @@ public class ScenarioService {
         }
         scenario.getActions().addAll(actions);
 
-        scenarioRepository.saveAndFlush(scenario);
+        scenarioRepository.save(scenario);
         log.info("Scenario added successfully: hubId={}, name={}, conditions={}, actions={}",
                 hubId, event.getName(), scenario.getConditions().size(), scenario.getActions().size());
     }
@@ -234,7 +237,7 @@ public class ScenarioService {
         for (ScenarioAction scenarioAction : scenario.getActions()) {
             try {
                 DeviceActionProto action = toDeviceActionProto(scenarioAction);
-                Instant timestamp = snapshot.getTimestamp();
+                Instant timestamp = Instant.now(); // Используем текущее время вместо времени снапшота
 
                 DeviceActionRequest request = DeviceActionRequest.newBuilder()
                         .setHubId(scenario.getHubId())
