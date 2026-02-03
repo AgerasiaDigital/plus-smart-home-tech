@@ -33,10 +33,13 @@ public class ScenarioService {
 
     @Transactional
     public void addDevice(String hubId, String sensorId, DeviceTypeAvro deviceType) {
-        Sensor sensor = sensorRepository.findById(sensorId).orElse(new Sensor());
-        sensor.setId(sensorId);
-        sensor.setHubId(hubId);
-        sensorRepository.save(sensor);
+        sensorRepository.findByIdAndHubId(sensorId, hubId)
+                .orElseGet(() -> {
+                    Sensor sensor = new Sensor();
+                    sensor.setId(sensorId);
+                    sensor.setHubId(hubId);
+                    return sensorRepository.save(sensor);
+                });
         log.info("Device added: hubId={}, sensorId={}, type={}", hubId, sensorId, deviceType);
     }
 
