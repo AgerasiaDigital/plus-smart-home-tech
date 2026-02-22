@@ -15,7 +15,7 @@ import java.util.Properties;
 public class KafkaConfig {
     private ConsumerConfig snapshotConsumer;
     private ConsumerConfig hubEventConsumer;
-    private long pollTimeoutMs = 1000;
+    private long pollTimeoutMs;
 
     @Getter
     @Setter
