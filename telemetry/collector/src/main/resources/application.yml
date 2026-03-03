@@ -1,11 +1,18 @@
+server:
+  port: 8080
+
+grpc:
+  server:
+    port: 59091
+
 spring:
   application:
     name: collector
   config:
-    import: configserver:http://localhost:8888
+    import: optional:configserver:http://localhost:8888
   cloud:
     config:
-      fail-fast: true
+      fail-fast: false
       retry:
         useRandomPolicy: true
         max-interval: 6000
