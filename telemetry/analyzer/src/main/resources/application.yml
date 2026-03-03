@@ -2,10 +2,12 @@ spring:
   application:
     name: analyzer
   config:
-    import: optional:configserver:http://localhost:8888
+    import: "configserver:"
   cloud:
     config:
-      fail-fast: false
+      discovery:
+        enabled: true
+        serviceId: config-server
   datasource:
     url: jdbc:postgresql://localhost:5432/analyzer
     username: postgres
@@ -26,7 +28,7 @@ spring:
 grpc:
   client:
     hub-router:
-      address: 'static://localhost:59090'
+      address: 'discovery:///hub-router'
       enableKeepAlive: true
       keepAliveWithoutCalls: true
       negotiationType: plaintext
@@ -54,3 +56,8 @@ analyzer:
         auto.offset.reset: earliest
         max.poll.interval.ms: 300000
       topic: telemetry.hubs.v1
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/

@@ -2,10 +2,12 @@ spring:
   application:
     name: aggregator
   config:
-    import: optional:configserver:http://localhost:8888
+    import: "configserver:"
   cloud:
     config:
-      fail-fast: false
+      discovery:
+        enabled: true
+        serviceId: config-server
 
 aggregator:
   kafka:
@@ -27,3 +29,8 @@ aggregator:
         acks: all
         retries: 3
       topic: telemetry.snapshots.v1
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/
