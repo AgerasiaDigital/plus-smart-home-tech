@@ -27,3 +27,8 @@ aggregator:
         acks: all
         retries: 3
       topic: telemetry.snapshots.v1
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
