@@ -2,10 +2,12 @@ spring:
   application:
     name: aggregator
   config:
-    import: optional:configserver:http://localhost:8888
+    import: "configserver:"
   cloud:
     config:
-      fail-fast: false
+      discovery:
+        enabled: true
+        serviceId: config-server
 
 aggregator:
   kafka:
@@ -31,4 +33,4 @@ aggregator:
 eureka:
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/
