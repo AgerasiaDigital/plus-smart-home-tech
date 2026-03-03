@@ -2,10 +2,55 @@ spring:
   application:
     name: analyzer
   config:
-    import: configserver:http://localhost:8888
+    import: optional:configserver:http://localhost:8888
   cloud:
     config:
-      fail-fast: true
-      retry:
-        useRandomPolicy: true
-        max-interval: 6000
+      fail-fast: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/analyzer
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+grpc:
+  client:
+    hub-router:
+      address: 'static://localhost:59090'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+
+analyzer:
+  kafka:
+    poll-timeout-ms: 1000
+    snapshot-consumer:
+      properties:
+        bootstrap.servers: localhost:9092
+        group.id: analyzer-snapshots-group
+        key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value.deserializer: ru.yandex.practicum.kafka.telemetry.serialization.SnapshotDeserializer
+        enable.auto.commit: false
+        auto.offset.reset: earliest
+        max.poll.records: 10
+      topic: telemetry.snapshots.v1
+    hub-event-consumer:
+      properties:
+        bootstrap.servers: localhost:9092
+        group.id: analyzer-hub-events-group
+        key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value.deserializer: ru.yandex.practicum.kafka.telemetry.serialization.HubEventDeserializer
+        enable.auto.commit: false
+        auto.offset.reset: earliest
+        max.poll.interval.ms: 300000
+      topic: telemetry.hubs.v1

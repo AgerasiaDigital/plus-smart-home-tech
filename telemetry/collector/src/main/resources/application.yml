@@ -13,6 +13,20 @@ spring:
   cloud:
     config:
       fail-fast: false
-      retry:
-        useRandomPolicy: true
-        max-interval: 6000
+
+collector:
+  kafka:
+    producer:
+      properties:
+        "bootstrap.servers": localhost:9092
+        "client.id": "telemetry.collector"
+        "key.serializer": org.apache.kafka.common.serialization.StringSerializer
+        "value.serializer": ru.yandex.practicum.kafka.telemetry.serialization.AvroSerializer
+        "acks": all
+        "retries": 3
+        "batch.size": 16384
+        "linger.ms": 1
+        "buffer.memory": 33554432
+      topics:
+        sensors-events: telemetry.sensors.v1
+        hubs-events: telemetry.hubs.v1
