@@ -36,11 +36,17 @@ public class ShoppingStoreController {
         if (product.getProductId() == null) {
             return ResponseEntity.status(HttpStatus.CREATED).body(service.createProduct(product));
         }
-        return ResponseEntity.ok(service.updateProduct(product));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.updateProduct(product));
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<ProductDto> deactivateProduct(@PathVariable UUID productId) {
+    public ResponseEntity<ProductDto> deactivateProductByPath(@PathVariable UUID productId) {
+        ProductDto deactivatedProduct = service.deactivateProduct(productId);
+        return ResponseEntity.ok(deactivatedProduct);
+    }
+
+    @PostMapping("/removeProductFromStore")
+    public ResponseEntity<ProductDto> removeProductFromStore(@RequestBody UUID productId) {
         ProductDto deactivatedProduct = service.deactivateProduct(productId);
         return ResponseEntity.ok(deactivatedProduct);
     }

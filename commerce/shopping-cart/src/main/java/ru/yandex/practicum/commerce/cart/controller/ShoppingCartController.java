@@ -2,9 +2,11 @@ package ru.yandex.practicum.commerce.cart.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.commerce.cart.dto.ChangeQuantityRequest;
 import ru.yandex.practicum.commerce.cart.service.CartService;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,27 +39,27 @@ public class ShoppingCartController {
         service.deactivateCart(username);
     }
 
-    @PatchMapping("/remove")
-    public ShoppingCartDto removeProductsPatch(@RequestParam String username,
-                                               @RequestBody Map<UUID, Long> products) {
-        return service.removeProducts(username, products);
-    }
-
     @PostMapping("/remove")
     public ShoppingCartDto removeProductsPost(@RequestParam String username,
-                                              @RequestBody Map<UUID, Long> products) {
-        return service.removeProducts(username, products);
+                                              @RequestBody List<UUID> productIds) {
+        return service.removeProductsByIds(username, productIds);
     }
 
-    @PutMapping("/change-quantity")
-    public ShoppingCartDto changeQuantityPut(@RequestParam String username,
-                                             @RequestBody Map<UUID, Long> products) {
-        return service.changeQuantity(username, products);
+    @PatchMapping("/remove")
+    public ShoppingCartDto removeProductsPatch(@RequestParam String username,
+                                               @RequestBody List<UUID> productIds) {
+        return service.removeProductsByIds(username, productIds);
     }
 
     @PostMapping("/change-quantity")
     public ShoppingCartDto changeQuantity(@RequestParam String username,
-                                          @RequestBody Map<UUID, Long> products) {
-        return service.changeQuantity(username, products);
+                                          @RequestBody ChangeQuantityRequest request) {
+        return service.changeQuantityByRequest(username, request);
+    }
+
+    @PutMapping("/change-quantity")
+    public ShoppingCartDto changeQuantityPut(@RequestParam String username,
+                                             @RequestBody ChangeQuantityRequest request) {
+        return service.changeQuantityByRequest(username, request);
     }
 }

@@ -3,11 +3,13 @@ package ru.yandex.practicum.commerce.cart.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.yandex.practicum.commerce.cart.dto.ChangeQuantityRequest;
 import ru.yandex.practicum.commerce.cart.model.Cart;
 import ru.yandex.practicum.commerce.cart.repository.CartRepository;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
 import ru.yandex.practicum.commerce.interaction.feign.WarehouseClient;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,7 +33,6 @@ public class CartService {
         }
         cart.getProducts().putAll(products);
 
-        // Проверяем наличие на складе через Feign + Circuit Breaker
         warehouseClient.checkProductsAvailability(toDto(cart));
 
         return toDto(repository.save(cart));
@@ -45,12 +46,35 @@ public class CartService {
     }
 
     @Transactional
-    public ShoppingCartDto removeProducts(String username, Map<UUID, Long> products) {
+    public ShoppingCartDto removeProductsByIds(String username, List<UUID> productIds) {
         Cart cart = getOrCreateCart(username);
         if (!cart.isActive()) {
             throw new RuntimeException("Cart is deactivated for user: " + username);
         }
-        products.keySet().forEach(cart.getProducts()::remove);
+        productIds.forEach(cart.getProducts()::remove);
+        return toDto(repository.save(cart));
+    }
+
+    @Transactional
+    public ShoppingCartDto removeProducts(String username, Map<UUID, Long> products) {
+        return removeProductsByIds(username, List.copyOf(products.keySet()));
+    }
+
+    @Transactional
+    public ShoppingCartDto changeQuantityByRequest(String username, ChangeQuantityRequest request) {
+        Cart cart = getOrCreateCart(username);
+        if (!cart.isActive()) {
+            throw new RuntimeException("Cart is deactivated for user: " + username);
+        }
+
+        if (request.getNewQuantity() <= 0) {
+            cart.getProducts().remove(request.getProductId());
+        } else {
+            cart.getProducts().put(request.getProductId(), request.getNewQuantity());
+        }
+
+        warehouseClient.checkProductsAvailability(toDto(cart));
+
         return toDto(repository.save(cart));
     }
 
@@ -60,20 +84,17 @@ public class CartService {
         if (!cart.isActive()) {
             throw new RuntimeException("Cart is deactivated for user: " + username);
         }
-        
+
         for (Map.Entry<UUID, Long> entry : products.entrySet()) {
-            UUID productId = entry.getKey();
-            Long newQuantity = entry.getValue();
-            
-            if (newQuantity <= 0) {
-                cart.getProducts().remove(productId);
+            if (entry.getValue() <= 0) {
+                cart.getProducts().remove(entry.getKey());
             } else {
-                cart.getProducts().put(productId, newQuantity);
+                cart.getProducts().put(entry.getKey(), entry.getValue());
             }
         }
-        
+
         warehouseClient.checkProductsAvailability(toDto(cart));
-        
+
         return toDto(repository.save(cart));
     }
 
