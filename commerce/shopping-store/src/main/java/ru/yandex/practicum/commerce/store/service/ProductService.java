@@ -30,10 +30,16 @@ public class ProductService {
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
         Product product = mapper.toEntity(dto);
+        product.setProductState(ProductState.ACTIVE);
+        return mapper.toDto(repository.save(product));
+    }
 
-        if (product.getProductState() == null) {
-            product.setProductState(ProductState.ACTIVE);
-        }
+    @Transactional
+    public ProductDto createOrUpdate(ProductDto dto) {
+        Product product = repository.findById(dto.getProductId())
+                .orElseGet(Product::new);
+        mapper.updateEntity(dto, product);
+        product.setProductState(ProductState.ACTIVE); // всегда ACTIVE при PUT
         return mapper.toDto(repository.save(product));
     }
 

@@ -36,7 +36,7 @@ public class ShoppingStoreController {
         if (product.getProductId() == null) {
             return ResponseEntity.status(HttpStatus.CREATED).body(service.createProduct(product));
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.updateProduct(product));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createOrUpdate(product));
     }
 
     @DeleteMapping("/{productId}")
