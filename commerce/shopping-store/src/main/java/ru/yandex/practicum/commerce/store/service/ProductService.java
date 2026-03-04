@@ -23,14 +23,16 @@ public class ProductService {
     private final ProductMapper mapper;
 
     public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
-        return repository.findAllByProductCategoryAndProductState(
-                category, ProductState.ACTIVE, pageable).map(mapper::toDto);
+        return repository.findAllByProductCategory(category, pageable).map(mapper::toDto);
     }
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
         Product product = mapper.toEntity(dto);
-        product.setProductState(ProductState.ACTIVE);
+        // productState сохраняем из запроса, по умолчанию ACTIVE
+        if (product.getProductState() == null) {
+            product.setProductState(ProductState.ACTIVE);
+        }
         return mapper.toDto(repository.save(product));
     }
 
@@ -39,7 +41,9 @@ public class ProductService {
         Product product = repository.findById(dto.getProductId())
                 .orElseGet(Product::new);
         mapper.updateEntity(dto, product);
-        product.setProductState(ProductState.ACTIVE); // всегда ACTIVE при PUT
+        if (product.getProductState() == null) {
+            product.setProductState(ProductState.ACTIVE);
+        }
         return mapper.toDto(repository.save(product));
     }
 
