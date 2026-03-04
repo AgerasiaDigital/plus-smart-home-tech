@@ -12,7 +12,6 @@ import ru.yandex.practicum.commerce.warehouse.repository.WarehouseProductReposit
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.UUID;
-import java.util.random.RandomGenerator;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +21,7 @@ public class WarehouseService {
 
     private static final String[] ADDRESSES = new String[]{"ADDRESS_1", "ADDRESS_2"};
     private static final String CURRENT_ADDRESS =
-            ADDRESSES[RandomGenerator.from(new SecureRandom()).nextInt(0, ADDRESSES.length)];
+            ADDRESSES[new SecureRandom().nextInt(ADDRESSES.length)];
 
     @Transactional
     public WarehouseProduct addProduct(UUID productId, long quantity, double width,
