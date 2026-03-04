@@ -32,9 +32,9 @@ public class ShoppingStoreController {
     }
 
     @PutMapping
-    public ResponseEntity<ProductDto> updateProduct(@RequestBody ProductDto product) {
+    public ResponseEntity<ProductDto> createOrUpdateProduct(@RequestBody ProductDto product) {
         if (product.getProductId() == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.CREATED).body(service.createProduct(product));
         }
         return ResponseEntity.ok(service.updateProduct(product));
     }
