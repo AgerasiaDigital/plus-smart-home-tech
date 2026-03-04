@@ -54,6 +54,29 @@ public class CartService {
         return toDto(repository.save(cart));
     }
 
+    @Transactional
+    public ShoppingCartDto changeQuantity(String username, Map<UUID, Long> products) {
+        Cart cart = getOrCreateCart(username);
+        if (!cart.isActive()) {
+            throw new RuntimeException("Cart is deactivated for user: " + username);
+        }
+        
+        for (Map.Entry<UUID, Long> entry : products.entrySet()) {
+            UUID productId = entry.getKey();
+            Long newQuantity = entry.getValue();
+            
+            if (newQuantity <= 0) {
+                cart.getProducts().remove(productId);
+            } else {
+                cart.getProducts().put(productId, newQuantity);
+            }
+        }
+        
+        warehouseClient.checkProductsAvailability(toDto(cart));
+        
+        return toDto(repository.save(cart));
+    }
+
     private Cart getOrCreateCart(String username) {
         return repository.findByUsernameAndActiveTrue(username).orElseGet(() -> {
             Cart c = new Cart();

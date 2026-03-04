@@ -49,9 +49,15 @@ public class ShoppingCartController {
         return service.removeProducts(username, products);
     }
 
+    @PutMapping("/change-quantity")
+    public ShoppingCartDto changeQuantityPut(@RequestParam String username,
+                                             @RequestBody Map<UUID, Long> products) {
+        return service.changeQuantity(username, products);
+    }
+
     @PostMapping("/change-quantity")
     public ShoppingCartDto changeQuantity(@RequestParam String username,
                                           @RequestBody Map<UUID, Long> products) {
-        return service.addProducts(username, products);
+        return service.changeQuantity(username, products);
     }
 }

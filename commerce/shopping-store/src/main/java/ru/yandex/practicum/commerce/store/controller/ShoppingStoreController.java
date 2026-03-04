@@ -39,10 +39,10 @@ public class ShoppingStoreController {
         return ResponseEntity.ok(service.updateProduct(product));
     }
 
-    @DeleteMapping
-    public ResponseEntity<Void> deactivateProduct(@RequestParam UUID productId) {
-        service.deactivateProduct(productId);
-        return ResponseEntity.ok().build();
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<ProductDto> deactivateProduct(@PathVariable UUID productId) {
+        ProductDto deactivatedProduct = service.deactivateProduct(productId);
+        return ResponseEntity.ok(deactivatedProduct);
     }
 
     @GetMapping("/{productId}")

@@ -43,12 +43,11 @@ public class ProductService {
     }
 
     @Transactional
-    public boolean deactivateProduct(UUID productId) {
+    public ProductDto deactivateProduct(UUID productId) {
         Product product = repository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
         product.setProductState(ProductState.DEACTIVATE);
-        repository.save(product);
-        return true;
+        return mapper.toDto(repository.save(product));
     }
 
     public ProductDto getProduct(UUID productId) {
