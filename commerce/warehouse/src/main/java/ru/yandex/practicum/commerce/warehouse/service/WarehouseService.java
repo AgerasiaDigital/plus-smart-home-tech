@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
 import ru.yandex.practicum.commerce.interaction.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
+import ru.yandex.practicum.commerce.warehouse.dto.NewProductInWarehouseRequest;
 import ru.yandex.practicum.commerce.warehouse.model.WarehouseProduct;
 import ru.yandex.practicum.commerce.warehouse.repository.WarehouseProductRepository;
 
@@ -24,21 +25,40 @@ public class WarehouseService {
             ADDRESSES[new SecureRandom().nextInt(ADDRESSES.length)];
 
     @Transactional
-    public WarehouseProduct addProduct(UUID productId, long quantity, double width,
-                                       double height, double depth, double weight, boolean fragile) {
-        WarehouseProduct product = repository.findById(productId).orElseGet(() -> {
-            WarehouseProduct p = new WarehouseProduct();
-            p.setProductId(productId);
-            p.setWidth(width);
-            p.setHeight(height);
-            p.setDepth(depth);
-            p.setWeight(weight);
-            p.setFragile(fragile);
+    public WarehouseProduct newProduct(NewProductInWarehouseRequest req) {
+        WarehouseProduct p = repository.findById(req.getProductId()).orElseGet(WarehouseProduct::new);
+        p.setProductId(req.getProductId());
+        p.setFragile(req.isFragile());
+        p.setWeight(req.getWeight());
+        if (req.getDimension() != null) {
+            p.setWidth(req.getDimension().getWidth());
+            p.setHeight(req.getDimension().getHeight());
+            p.setDepth(req.getDimension().getDepth());
+        }
+        if (p.getQuantity() == 0) {
             p.setQuantity(0);
-            return p;
+        }
+        return repository.save(p);
+    }
+
+    @Transactional
+    public WarehouseProduct addProduct(NewProductInWarehouseRequest req) {
+        WarehouseProduct p = repository.findById(req.getProductId()).orElseGet(() -> {
+            WarehouseProduct np = new WarehouseProduct();
+            np.setProductId(req.getProductId());
+            np.setFragile(req.isFragile());
+            np.setWeight(req.getWeight());
+            if (req.getDimension() != null) {
+                np.setWidth(req.getDimension().getWidth());
+                np.setHeight(req.getDimension().getHeight());
+                np.setDepth(req.getDimension().getDepth());
+            }
+            np.setQuantity(0);
+            return np;
         });
-        product.setQuantity(product.getQuantity() + quantity);
-        return repository.save(product);
+        long qty = req.getQuantity() > 0 ? req.getQuantity() : 100L;
+        p.setQuantity(p.getQuantity() + qty);
+        return repository.save(p);
     }
 
     public BookedProductsDto checkAvailability(ShoppingCartDto cart) {
