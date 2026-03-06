@@ -20,39 +20,37 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository repository;
-    private final ProductMapper mapper;
 
     public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
-        return repository.findAllByProductCategory(category, pageable).map(mapper::toDto);
+        return repository.findAllByProductCategory(category, pageable).map(ProductMapper::toDto);
     }
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
-        Product product = mapper.toEntity(dto);
-        // productState сохраняем из запроса, по умолчанию ACTIVE
+        Product product = ProductMapper.toEntity(dto);
         if (product.getProductState() == null) {
             product.setProductState(ProductState.ACTIVE);
         }
-        return mapper.toDto(repository.save(product));
+        return ProductMapper.toDto(repository.save(product));
     }
 
     @Transactional
     public ProductDto createOrUpdate(ProductDto dto) {
         Product product = repository.findById(dto.getProductId())
                 .orElseGet(Product::new);
-        mapper.updateEntity(dto, product);
+        ProductMapper.updateEntity(dto, product);
         if (product.getProductState() == null) {
             product.setProductState(ProductState.ACTIVE);
         }
-        return mapper.toDto(repository.save(product));
+        return ProductMapper.toDto(repository.save(product));
     }
 
     @Transactional
     public ProductDto updateProduct(ProductDto dto) {
         Product product = repository.findById(dto.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found: " + dto.getProductId()));
-        mapper.updateEntity(dto, product);
-        return mapper.toDto(repository.save(product));
+        ProductMapper.updateEntity(dto, product);
+        return ProductMapper.toDto(repository.save(product));
     }
 
     @Transactional
@@ -60,11 +58,11 @@ public class ProductService {
         Product product = repository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
         product.setProductState(ProductState.DEACTIVATE);
-        return mapper.toDto(repository.save(product));
+        return ProductMapper.toDto(repository.save(product));
     }
 
     public ProductDto getProduct(UUID productId) {
-        return mapper.toDto(repository.findById(productId)
+        return ProductMapper.toDto(repository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId)));
     }
 

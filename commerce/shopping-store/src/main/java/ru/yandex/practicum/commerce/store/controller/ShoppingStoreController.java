@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.commerce.interaction.dto.ProductCategory;
 import ru.yandex.practicum.commerce.interaction.dto.ProductDto;
@@ -32,32 +31,27 @@ public class ShoppingStoreController {
     }
 
     @PutMapping
-    public ResponseEntity<ProductDto> createOrUpdateProduct(@RequestBody ProductDto product) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProductDto createOrUpdateProduct(@RequestBody ProductDto product) {
         if (product.getProductId() == null) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(service.createProduct(product));
+            return service.createProduct(product);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.createOrUpdate(product));
+        return service.createOrUpdate(product);
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<ProductDto> deactivateProductByPath(@PathVariable UUID productId) {
-        ProductDto deactivatedProduct = service.deactivateProduct(productId);
-        return ResponseEntity.ok(deactivatedProduct);
+    public ProductDto deactivateProductByPath(@PathVariable UUID productId) {
+        return service.deactivateProduct(productId);
     }
 
     @PostMapping("/removeProductFromStore")
-    public ResponseEntity<ProductDto> removeProductFromStore(@RequestBody UUID productId) {
-        ProductDto deactivatedProduct = service.deactivateProduct(productId);
-        return ResponseEntity.ok(deactivatedProduct);
+    public ProductDto removeProductFromStore(@RequestBody UUID productId) {
+        return service.deactivateProduct(productId);
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<ProductDto> getProduct(@PathVariable UUID productId) {
-        try {
-            return ResponseEntity.ok(service.getProduct(productId));
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ProductDto getProduct(@PathVariable UUID productId) {
+        return service.getProduct(productId);
     }
 
     @PostMapping("/quantityState")

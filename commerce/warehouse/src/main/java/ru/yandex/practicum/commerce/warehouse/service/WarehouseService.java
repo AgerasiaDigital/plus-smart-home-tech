@@ -11,8 +11,12 @@ import ru.yandex.practicum.commerce.warehouse.model.WarehouseProduct;
 import ru.yandex.practicum.commerce.warehouse.repository.WarehouseProductRepository;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +67,20 @@ public class WarehouseService {
 
     public BookedProductsDto checkAvailability(ShoppingCartDto cart) {
         Map<UUID, Long> requested = cart.getProducts();
+        Set<UUID> productIds = requested.keySet();
+
+        // Одним запросом загружаем все нужные продукты
+        Map<UUID, WarehouseProduct> warehouseProducts = repository.findAllById(productIds)
+                .stream()
+                .collect(Collectors.toMap(WarehouseProduct::getProductId, Function.identity()));
+
+        // Проверяем, что все запрошенные продукты найдены
+        for (UUID id : productIds) {
+            if (!warehouseProducts.containsKey(id)) {
+                throw new RuntimeException("Product not found in warehouse: " + id);
+            }
+        }
+
         double totalWeight = 0;
         double totalVolume = 0;
         boolean fragile = false;
@@ -70,9 +88,7 @@ public class WarehouseService {
         for (Map.Entry<UUID, Long> entry : requested.entrySet()) {
             UUID productId = entry.getKey();
             long requestedQty = entry.getValue();
-
-            WarehouseProduct wp = repository.findById(productId)
-                    .orElseThrow(() -> new RuntimeException("Product not found in warehouse: " + productId));
+            WarehouseProduct wp = warehouseProducts.get(productId);
 
             if (wp.getQuantity() < requestedQty) {
                 throw new RuntimeException("Not enough quantity for product: " + productId
