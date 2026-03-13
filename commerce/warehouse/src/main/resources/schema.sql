@@ -1,0 +1,11 @@
+CREATE SCHEMA IF NOT EXISTS warehouse;
+
+CREATE TABLE IF NOT EXISTS warehouse.products (
+    product_id UUID PRIMARY KEY,
+    quantity BIGINT NOT NULL DEFAULT 0,
+    width DOUBLE PRECISION,
+    height DOUBLE PRECISION,
+    depth DOUBLE PRECISION,
+    weight DOUBLE PRECISION,
+    fragile BOOLEAN NOT NULL DEFAULT FALSE
+);
