@@ -5,13 +5,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
 import ru.yandex.practicum.commerce.interaction.dto.BookedProductsDto;
+import ru.yandex.practicum.commerce.interaction.dto.ShippedToDeliveryRequest;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
 import ru.yandex.practicum.commerce.warehouse.dto.NewProductInWarehouseRequest;
+import ru.yandex.practicum.commerce.warehouse.model.OrderBooking;
 import ru.yandex.practicum.commerce.warehouse.model.WarehouseProduct;
+import ru.yandex.practicum.commerce.warehouse.repository.OrderBookingRepository;
 import ru.yandex.practicum.commerce.warehouse.repository.WarehouseProductRepository;
 
 import java.security.SecureRandom;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -23,8 +25,9 @@ import java.util.stream.Collectors;
 public class WarehouseService {
 
     private final WarehouseProductRepository repository;
+    private final OrderBookingRepository bookingRepository;
 
-    private static final String[] ADDRESSES = new String[]{"ADDRESS_1", "ADDRESS_2"};
+    private static final String[] ADDRESSES = {"ADDRESS_1", "ADDRESS_2"};
     private static final String CURRENT_ADDRESS =
             ADDRESSES[new SecureRandom().nextInt(ADDRESSES.length)];
 
@@ -38,9 +41,6 @@ public class WarehouseService {
             p.setWidth(req.getDimension().getWidth());
             p.setHeight(req.getDimension().getHeight());
             p.setDepth(req.getDimension().getDepth());
-        }
-        if (p.getQuantity() == 0) {
-            p.setQuantity(0);
         }
         return repository.save(p);
     }
@@ -66,15 +66,46 @@ public class WarehouseService {
     }
 
     public BookedProductsDto checkAvailability(ShoppingCartDto cart) {
-        Map<UUID, Long> requested = cart.getProducts();
-        Set<UUID> productIds = requested.keySet();
+        return buildBookedProducts(cart.getProducts(), false);
+    }
 
-        // Одним запросом загружаем все нужные продукты
+    @Transactional
+    public BookedProductsDto assemblyProductForOrder(ShoppingCartDto cart) {
+        BookedProductsDto booked = buildBookedProducts(cart.getProducts(), true);
+
+        OrderBooking booking = new OrderBooking();
+        booking.setOrderId(cart.getShoppingCartId());
+        booking.setProducts(new java.util.HashMap<>(cart.getProducts()));
+        bookingRepository.save(booking);
+
+        return booked;
+    }
+
+    @Transactional
+    public void shippedToDelivery(ShippedToDeliveryRequest request) {
+        OrderBooking booking = bookingRepository.findByOrderId(request.getOrderId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Booking not found for order: " + request.getOrderId()));
+        booking.setDeliveryId(request.getDeliveryId());
+        bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public void returnProducts(Map<UUID, Long> products) {
+        for (Map.Entry<UUID, Long> entry : products.entrySet()) {
+            WarehouseProduct wp = repository.findById(entry.getKey())
+                    .orElseThrow(() -> new RuntimeException("Product not found: " + entry.getKey()));
+            wp.setQuantity(wp.getQuantity() + entry.getValue());
+            repository.save(wp);
+        }
+    }
+
+    private BookedProductsDto buildBookedProducts(Map<UUID, Long> requested, boolean decreaseStock) {
+        Set<UUID> productIds = requested.keySet();
         Map<UUID, WarehouseProduct> warehouseProducts = repository.findAllById(productIds)
                 .stream()
                 .collect(Collectors.toMap(WarehouseProduct::getProductId, Function.identity()));
 
-        // Проверяем, что все запрошенные продукты найдены
         for (UUID id : productIds) {
             if (!warehouseProducts.containsKey(id)) {
                 throw new RuntimeException("Product not found in warehouse: " + id);
@@ -93,6 +124,11 @@ public class WarehouseService {
             if (wp.getQuantity() < requestedQty) {
                 throw new RuntimeException("Not enough quantity for product: " + productId
                         + ". Available: " + wp.getQuantity() + ", requested: " + requestedQty);
+            }
+
+            if (decreaseStock) {
+                wp.setQuantity(wp.getQuantity() - requestedQty);
+                repository.save(wp);
             }
 
             totalWeight += wp.getWeight() * requestedQty;
