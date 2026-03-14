@@ -37,21 +37,26 @@ public class OrderService {
     public OrderDto createNewOrder(CreateNewOrderRequest request) {
         ShoppingCartDto cart = request.getShoppingCart();
 
-        BookedProductsDto booked = warehouseClient.assemblyProductForOrderFromShoppingCart(cart);
-
         Order order = new Order();
         order.setShoppingCartId(cart.getShoppingCartId());
         order.setProducts(new java.util.HashMap<>(cart.getProducts()));
         order.setState(OrderState.NEW);
+        order = repository.save(order);
+
+        AssemblyProductsForOrderRequest assemblyRequest = AssemblyProductsForOrderRequest.builder()
+                .orderId(order.getOrderId())
+                .products(cart.getProducts())
+                .build();
+
+        BookedProductsDto booked = warehouseClient.assemblyProductForOrderFromShoppingCart(assemblyRequest);
+
         order.setDeliveryWeight(booked.getDeliveryWeight());
         order.setDeliveryVolume(booked.getDeliveryVolume());
         order.setFragile(booked.isFragile());
-        order = repository.save(order);
 
         AddressDto warehouseAddress = warehouseClient.getWarehouseAddress();
 
         DeliveryDto deliveryDto = DeliveryDto.builder()
-                .deliveryId(UUID.randomUUID())
                 .fromAddress(warehouseAddress)
                 .toAddress(request.getDeliveryAddress())
                 .orderId(order.getOrderId())

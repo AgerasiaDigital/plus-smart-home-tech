@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
+import ru.yandex.practicum.commerce.interaction.dto.AssemblyProductsForOrderRequest;
 import ru.yandex.practicum.commerce.interaction.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.interaction.dto.ShippedToDeliveryRequest;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
+import ru.yandex.practicum.commerce.warehouse.dto.AddProductToWarehouseRequest;
 import ru.yandex.practicum.commerce.warehouse.dto.NewProductInWarehouseRequest;
 import ru.yandex.practicum.commerce.warehouse.model.OrderBooking;
 import ru.yandex.practicum.commerce.warehouse.model.WarehouseProduct;
@@ -46,23 +48,11 @@ public class WarehouseService {
     }
 
     @Transactional
-    public WarehouseProduct addProduct(NewProductInWarehouseRequest req) {
-        WarehouseProduct p = repository.findById(req.getProductId()).orElseGet(() -> {
-            WarehouseProduct np = new WarehouseProduct();
-            np.setProductId(req.getProductId());
-            np.setFragile(req.isFragile());
-            np.setWeight(req.getWeight());
-            if (req.getDimension() != null) {
-                np.setWidth(req.getDimension().getWidth());
-                np.setHeight(req.getDimension().getHeight());
-                np.setDepth(req.getDimension().getDepth());
-            }
-            np.setQuantity(0);
-            return np;
-        });
-        long qty = req.getQuantity() > 0 ? req.getQuantity() : 100L;
-        p.setQuantity(p.getQuantity() + qty);
-        return repository.save(p);
+    public void addProduct(AddProductToWarehouseRequest req) {
+        WarehouseProduct p = repository.findById(req.getProductId())
+                .orElseThrow(() -> new RuntimeException("Product not found in warehouse: " + req.getProductId()));
+        p.setQuantity(p.getQuantity() + req.getQuantity());
+        repository.save(p);
     }
 
     public BookedProductsDto checkAvailability(ShoppingCartDto cart) {
@@ -70,12 +60,12 @@ public class WarehouseService {
     }
 
     @Transactional
-    public BookedProductsDto assemblyProductForOrder(ShoppingCartDto cart) {
-        BookedProductsDto booked = buildBookedProducts(cart.getProducts(), true);
+    public BookedProductsDto assemblyProductForOrder(AssemblyProductsForOrderRequest req) {
+        BookedProductsDto booked = buildBookedProducts(req.getProducts(), true);
 
         OrderBooking booking = new OrderBooking();
-        booking.setOrderId(cart.getShoppingCartId());
-        booking.setProducts(new java.util.HashMap<>(cart.getProducts()));
+        booking.setOrderId(req.getOrderId());
+        booking.setProducts(new java.util.HashMap<>(req.getProducts()));
         bookingRepository.save(booking);
 
         return booked;

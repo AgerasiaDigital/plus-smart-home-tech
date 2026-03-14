@@ -3,9 +3,11 @@ package ru.yandex.practicum.commerce.warehouse.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
+import ru.yandex.practicum.commerce.interaction.dto.AssemblyProductsForOrderRequest;
 import ru.yandex.practicum.commerce.interaction.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.interaction.dto.ShippedToDeliveryRequest;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
+import ru.yandex.practicum.commerce.warehouse.dto.AddProductToWarehouseRequest;
 import ru.yandex.practicum.commerce.warehouse.dto.NewProductInWarehouseRequest;
 import ru.yandex.practicum.commerce.warehouse.model.WarehouseProduct;
 import ru.yandex.practicum.commerce.warehouse.service.WarehouseService;
@@ -36,13 +38,13 @@ public class WarehouseController {
     }
 
     @PostMapping("/add")
-    public WarehouseProduct addProductToWarehouse(@RequestBody NewProductInWarehouseRequest request) {
-        return service.addProduct(request);
+    public void addProductToWarehouse(@RequestBody AddProductToWarehouseRequest request) {
+        service.addProduct(request);
     }
 
     @PostMapping("/assembly")
-    public BookedProductsDto assemblyProductForOrderFromShoppingCart(@RequestBody ShoppingCartDto cart) {
-        return service.assemblyProductForOrder(cart);
+    public BookedProductsDto assemblyProductForOrderFromShoppingCart(@RequestBody AssemblyProductsForOrderRequest request) {
+        return service.assemblyProductForOrder(request);
     }
 
     @PostMapping("/shipped")

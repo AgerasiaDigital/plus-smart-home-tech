@@ -2,6 +2,7 @@ package ru.yandex.practicum.commerce.interaction.feign;
 
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
+import ru.yandex.practicum.commerce.interaction.dto.AssemblyProductsForOrderRequest;
 import ru.yandex.practicum.commerce.interaction.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.interaction.dto.ShippedToDeliveryRequest;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
@@ -23,7 +24,7 @@ public class WarehouseClientFallback implements WarehouseClient {
     }
 
     @Override
-    public BookedProductsDto assemblyProductForOrderFromShoppingCart(ShoppingCartDto cart) {
+    public BookedProductsDto assemblyProductForOrderFromShoppingCart(AssemblyProductsForOrderRequest request) {
         throw new RuntimeException("Сервис склада временно недоступен. Пожалуйста, попробуйте позже.");
     }
 

@@ -12,7 +12,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AssemblyProductForOrderFromShoppingCartRequest {
+public class AssemblyProductsForOrderRequest {
     private UUID orderId;
     private Map<UUID, Long> products;
 }
