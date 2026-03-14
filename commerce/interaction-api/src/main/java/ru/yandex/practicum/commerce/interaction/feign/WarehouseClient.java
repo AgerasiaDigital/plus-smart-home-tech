@@ -3,6 +3,7 @@ package ru.yandex.practicum.commerce.interaction.feign;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
+import ru.yandex.practicum.commerce.interaction.dto.AssemblyProductsForOrderRequest;
 import ru.yandex.practicum.commerce.interaction.dto.BookedProductsDto;
 import ru.yandex.practicum.commerce.interaction.dto.ShippedToDeliveryRequest;
 import ru.yandex.practicum.commerce.interaction.dto.ShoppingCartDto;
@@ -20,7 +21,7 @@ public interface WarehouseClient {
     AddressDto getWarehouseAddress();
 
     @PostMapping("/api/v1/warehouse/assembly")
-    BookedProductsDto assemblyProductForOrderFromShoppingCart(@RequestBody ShoppingCartDto cart);
+    BookedProductsDto assemblyProductForOrderFromShoppingCart(@RequestBody AssemblyProductsForOrderRequest request);
 
     @PostMapping("/api/v1/warehouse/shipped")
     void shippedToDelivery(@RequestBody ShippedToDeliveryRequest request);
