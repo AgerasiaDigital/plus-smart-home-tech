@@ -7,6 +7,7 @@ import ru.yandex.practicum.commerce.interaction.dto.*;
 import ru.yandex.practicum.commerce.interaction.feign.DeliveryClient;
 import ru.yandex.practicum.commerce.interaction.feign.PaymentClient;
 import ru.yandex.practicum.commerce.interaction.feign.WarehouseClient;
+import ru.yandex.practicum.commerce.order.mapper.OrderMapper;
 import ru.yandex.practicum.commerce.order.model.Order;
 import ru.yandex.practicum.commerce.order.repository.OrderRepository;
 
@@ -29,7 +30,7 @@ public class OrderService {
             throw new RuntimeException("Username must not be empty");
         }
         return repository.findAll().stream()
-                .map(this::toDto)
+                .map(OrderMapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -66,86 +67,86 @@ public class OrderService {
         DeliveryDto savedDelivery = deliveryClient.planDelivery(deliveryDto);
         order.setDeliveryId(savedDelivery.getDeliveryId());
 
-        BigDecimal deliveryCost = deliveryClient.deliveryCost(toDto(order));
+        BigDecimal deliveryCost = deliveryClient.deliveryCost(OrderMapper.toDto(order));
         order.setDeliveryPrice(deliveryCost);
 
-        BigDecimal productCost = paymentClient.productCost(toDto(order));
+        BigDecimal productCost = paymentClient.productCost(OrderMapper.toDto(order));
         order.setProductPrice(productCost);
 
-        BigDecimal totalCost = paymentClient.getTotalCost(toDto(order));
+        BigDecimal totalCost = paymentClient.getTotalCost(OrderMapper.toDto(order));
         order.setTotalPrice(totalCost);
 
         order.setState(OrderState.ON_PAYMENT);
         order = repository.save(order);
 
-        return toDto(order);
+        return OrderMapper.toDto(order);
     }
 
     @Transactional
     public OrderDto payment(UUID orderId) {
         Order order = getOrder(orderId);
-        PaymentDto paymentDto = paymentClient.payment(toDto(order));
+        PaymentDto paymentDto = paymentClient.payment(OrderMapper.toDto(order));
         order.setPaymentId(paymentDto.getPaymentId());
         order.setState(OrderState.ON_PAYMENT);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto paymentFailed(UUID orderId) {
         Order order = getOrder(orderId);
         order.setState(OrderState.PAYMENT_FAILED);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto delivery(UUID orderId) {
         Order order = getOrder(orderId);
         order.setState(OrderState.DELIVERED);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto deliveryFailed(UUID orderId) {
         Order order = getOrder(orderId);
         order.setState(OrderState.DELIVERY_FAILED);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto assembly(UUID orderId) {
         Order order = getOrder(orderId);
         order.setState(OrderState.ASSEMBLED);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto assemblyFailed(UUID orderId) {
         Order order = getOrder(orderId);
         order.setState(OrderState.ASSEMBLY_FAILED);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto complete(UUID orderId) {
         Order order = getOrder(orderId);
         order.setState(OrderState.COMPLETED);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto calculateDeliveryCost(UUID orderId) {
         Order order = getOrder(orderId);
-        BigDecimal cost = deliveryClient.deliveryCost(toDto(order));
+        BigDecimal cost = deliveryClient.deliveryCost(OrderMapper.toDto(order));
         order.setDeliveryPrice(cost);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
     public OrderDto calculateTotalCost(UUID orderId) {
         Order order = getOrder(orderId);
-        BigDecimal total = paymentClient.getTotalCost(toDto(order));
+        BigDecimal total = paymentClient.getTotalCost(OrderMapper.toDto(order));
         order.setTotalPrice(total);
-        return toDto(repository.save(order));
+        return OrderMapper.toDto(repository.save(order));
     }
 
     @Transactional
@@ -154,28 +155,11 @@ public class OrderService {
         order.setState(OrderState.PRODUCT_RETURNED);
         repository.save(order);
         warehouseClient.returnProducts(request.getProducts());
-        return toDto(order);
+        return OrderMapper.toDto(order);
     }
 
     private Order getOrder(UUID orderId) {
         return repository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
-    }
-
-    private OrderDto toDto(Order o) {
-        return OrderDto.builder()
-                .orderId(o.getOrderId())
-                .shoppingCartId(o.getShoppingCartId())
-                .products(o.getProducts())
-                .paymentId(o.getPaymentId())
-                .deliveryId(o.getDeliveryId())
-                .state(o.getState())
-                .deliveryWeight(o.getDeliveryWeight())
-                .deliveryVolume(o.getDeliveryVolume())
-                .fragile(o.getFragile())
-                .totalPrice(o.getTotalPrice())
-                .deliveryPrice(o.getDeliveryPrice())
-                .productPrice(o.getProductPrice())
-                .build();
     }
 }

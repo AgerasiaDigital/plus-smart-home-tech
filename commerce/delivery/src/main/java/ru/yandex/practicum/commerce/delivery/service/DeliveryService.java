@@ -3,10 +3,9 @@ package ru.yandex.practicum.commerce.delivery.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.yandex.practicum.commerce.delivery.mapper.DeliveryMapper;
 import ru.yandex.practicum.commerce.delivery.model.Delivery;
-import ru.yandex.practicum.commerce.delivery.model.DeliveryAddress;
 import ru.yandex.practicum.commerce.delivery.repository.DeliveryRepository;
-import ru.yandex.practicum.commerce.interaction.dto.AddressDto;
 import ru.yandex.practicum.commerce.interaction.dto.DeliveryDto;
 import ru.yandex.practicum.commerce.interaction.dto.DeliveryState;
 import ru.yandex.practicum.commerce.interaction.dto.OrderDto;
@@ -22,6 +21,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DeliveryService {
 
+    private static final BigDecimal BASE_RATE_ADDRESS_1 = new BigDecimal("5.00");
+    private static final BigDecimal ADDRESS_2_MULTIPLIER = new BigDecimal("2");
+    private static final BigDecimal FIXED_SURCHARGE = new BigDecimal("5.00");
+    private static final BigDecimal FRAGILE_RATE = new BigDecimal("0.20");
+    private static final BigDecimal WEIGHT_RATE = new BigDecimal("0.30");
+    private static final BigDecimal VOLUME_RATE = new BigDecimal("0.20");
+    private static final BigDecimal DIFFERENT_STREET_RATE = new BigDecimal("0.20");
+
     private final DeliveryRepository repository;
     private final OrderClient orderClient;
     private final WarehouseClient warehouseClient;
@@ -29,12 +36,12 @@ public class DeliveryService {
     @Transactional
     public DeliveryDto planDelivery(DeliveryDto dto) {
         Delivery delivery = new Delivery();
-        delivery.setFromAddress(toAddress(dto.getFromAddress()));
-        delivery.setToAddress(toAddress(dto.getToAddress()));
+        delivery.setFromAddress(DeliveryMapper.toAddress(dto.getFromAddress()));
+        delivery.setToAddress(DeliveryMapper.toAddress(dto.getToAddress()));
         delivery.setOrderId(dto.getOrderId());
         delivery.setDeliveryState(DeliveryState.CREATED);
         delivery = repository.save(delivery);
-        return toDto(delivery);
+        return DeliveryMapper.toDto(delivery);
     }
 
     public BigDecimal deliveryCost(OrderDto order) {
@@ -44,31 +51,35 @@ public class DeliveryService {
 
         String warehouseName = delivery.getFromAddress().getCountry();
 
-        double base = 5.0;
+        BigDecimal base = BASE_RATE_ADDRESS_1;
 
         if (warehouseName != null && warehouseName.contains("ADDRESS_2")) {
-            base = base * 2;
+            base = base.multiply(ADDRESS_2_MULTIPLIER);
         }
-        base = base + 5.0;
+        base = base.add(FIXED_SURCHARGE);
 
         if (Boolean.TRUE.equals(order.getFragile())) {
-            base = base + base * 0.2;
+            base = base.add(base.multiply(FRAGILE_RATE));
         }
 
-        double weight = order.getDeliveryWeight() != null ? order.getDeliveryWeight() : 0.0;
-        base = base + weight * 0.3;
+        BigDecimal weight = order.getDeliveryWeight() != null
+                ? BigDecimal.valueOf(order.getDeliveryWeight())
+                : BigDecimal.ZERO;
+        base = base.add(weight.multiply(WEIGHT_RATE));
 
-        double volume = order.getDeliveryVolume() != null ? order.getDeliveryVolume() : 0.0;
-        base = base + volume * 0.2;
+        BigDecimal volume = order.getDeliveryVolume() != null
+                ? BigDecimal.valueOf(order.getDeliveryVolume())
+                : BigDecimal.ZERO;
+        base = base.add(volume.multiply(VOLUME_RATE));
 
         String warehouseStreet = delivery.getFromAddress().getStreet();
         String deliveryStreet = delivery.getToAddress().getStreet();
         boolean sameStreet = warehouseStreet != null && warehouseStreet.equals(deliveryStreet);
         if (!sameStreet) {
-            base = base + base * 0.2;
+            base = base.add(base.multiply(DIFFERENT_STREET_RATE));
         }
 
-        return BigDecimal.valueOf(base).setScale(2, RoundingMode.HALF_UP);
+        return base.setScale(2, RoundingMode.HALF_UP);
     }
 
     @Transactional
@@ -106,32 +117,5 @@ public class DeliveryService {
         return repository.findByOrderId(orderId)
                 .orElseThrow(() -> new RuntimeException(
                         "Delivery not found for order: " + orderId));
-    }
-
-    private DeliveryAddress toAddress(AddressDto dto) {
-        if (dto == null) return new DeliveryAddress();
-        return new DeliveryAddress(
-                dto.getCountry(), dto.getCity(), dto.getStreet(), dto.getHouse(), dto.getFlat());
-    }
-
-    private DeliveryDto toDto(Delivery d) {
-        return DeliveryDto.builder()
-                .deliveryId(d.getDeliveryId())
-                .fromAddress(toAddressDto(d.getFromAddress()))
-                .toAddress(toAddressDto(d.getToAddress()))
-                .orderId(d.getOrderId())
-                .deliveryState(d.getDeliveryState())
-                .build();
-    }
-
-    private AddressDto toAddressDto(DeliveryAddress a) {
-        if (a == null) return null;
-        return AddressDto.builder()
-                .country(a.getCountry())
-                .city(a.getCity())
-                .street(a.getStreet())
-                .house(a.getHouse())
-                .flat(a.getFlat())
-                .build();
     }
 }

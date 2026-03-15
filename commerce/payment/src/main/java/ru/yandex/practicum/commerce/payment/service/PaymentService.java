@@ -11,8 +11,11 @@ import ru.yandex.practicum.commerce.payment.repository.PaymentRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +28,19 @@ public class PaymentService {
     private final OrderClient orderClient;
 
     public BigDecimal productCost(OrderDto order) {
+        Map<UUID, Long> products = order.getProducts();
+        Set<UUID> productIds = products.keySet();
+
+        Map<UUID, BigDecimal> prices = productIds.stream()
+                .collect(Collectors.toMap(
+                        id -> id,
+                        id -> shoppingStoreClient.getProduct(id).getPrice()
+                ));
+
         BigDecimal total = BigDecimal.ZERO;
-        for (Map.Entry<UUID, Long> entry : order.getProducts().entrySet()) {
-            ProductDto product = shoppingStoreClient.getProduct(entry.getKey());
-            BigDecimal lineTotal = product.getPrice().multiply(BigDecimal.valueOf(entry.getValue()));
-            total = total.add(lineTotal);
+        for (Map.Entry<UUID, Long> entry : products.entrySet()) {
+            BigDecimal price = prices.get(entry.getKey());
+            total = total.add(price.multiply(BigDecimal.valueOf(entry.getValue())));
         }
         return total;
     }
@@ -68,17 +79,19 @@ public class PaymentService {
     @Transactional
     public void refund(UUID paymentId) {
         Payment payment = getPayment(paymentId);
+        // Сначала уведомляем внешний сервис, потом фиксируем статус в БД
+        orderClient.payment(payment.getOrderId());
         payment.setPaymentState(PaymentState.SUCCESS);
         repository.save(payment);
-        orderClient.payment(payment.getOrderId());
     }
 
     @Transactional
     public void paymentFailed(UUID paymentId) {
         Payment payment = getPayment(paymentId);
+        // Сначала уведомляем внешний сервис, потом фиксируем статус в БД
+        orderClient.paymentFailed(payment.getOrderId());
         payment.setPaymentState(PaymentState.FAILED);
         repository.save(payment);
-        orderClient.paymentFailed(payment.getOrderId());
     }
 
     private Payment getPayment(UUID paymentId) {
